@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 interface RegisterFormData {
   name: string;
@@ -8,8 +9,9 @@ interface RegisterFormData {
   confirmPassword: string;
 }
 
-const RegisterPage: React.FC = () => {
+export default function RegisterPage() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [formData, setFormData] = useState<RegisterFormData>({
     name: '',
     email: '',
@@ -27,77 +29,112 @@ const RegisterPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
 
-    // Validation
     if (!formData.name.trim()) {
       setError('Please enter your full name');
+      setLoading(false);
       return;
     }
     if (!formData.email.trim()) {
       setError('Please enter your email address');
+      setLoading(false);
       return;
     }
     if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters long');
+      setError('Password must be at least 6 characters');
+      setLoading(false);
       return;
     }
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
+      setLoading(false);
       return;
     }
 
-    setLoading(true);
-
     try {
-      // Simulated registration - replace with actual API call
-      console.log('Register attempt:', { name: formData.name, email: formData.email });
-
-      // Store user in localStorage (simulated)
-      localStorage.setItem('user', JSON.stringify({ name: formData.name, email: formData.email }));
-      localStorage.setItem('isAuthenticated', 'true');
-
-      // Redirect to dashboard
-      navigate('/dashboard');
-    } catch (err) {
+      login({ name: formData.name, email: formData.email });
+      navigate('/home');
+    } catch {
       setError('Failed to create account. Please try again.');
-      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="auth-shell">
-      <div className="auth-card">
-        <p className="auth-badge">Join us</p>
-        <h1 className="auth-title">Create Account</h1>
-        <p className="auth-subtitle">Create your account and start organizing your finances beautifully.</p>
+    <div className="min-h-screen bg-app-bg flex items-center justify-center p-6">
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-8">
+          <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-brand to-brand-dark flex items-center justify-center text-white shadow-glow">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+              <circle cx="8.5" cy="7" r="4" />
+              <line x1="20" y1="8" x2="20" y2="14" />
+              <line x1="23" y1="11" x2="17" y2="11" />
+            </svg>
+          </div>
+          <h1 className="text-2xl font-extrabold text-text-primary tracking-tight">Create Account</h1>
+          <p className="text-sm text-text-secondary mt-2">Start organizing your finances beautifully</p>
+        </div>
 
-        <form onSubmit={handleSubmit} className="form-stack">
+        <form onSubmit={handleSubmit} className="card p-6 space-y-5">
           {error && (
-            <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+            <div className="p-3 bg-red-50 border border-red-100 rounded-2xl text-red-600 text-sm font-medium">
               {error}
             </div>
           )}
 
-          <div className="form-field">
-            <label htmlFor="name">Full Name</label>
-            <input type="text" id="name" name="name" value={formData.name} onChange={handleChange} required placeholder="John Doe" />
+          <div>
+            <label className="block text-sm font-semibold text-text-primary mb-2">Full Name</label>
+            <input
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              required
+              placeholder="John Doe"
+              className="input-field"
+            />
           </div>
 
-          <div className="form-field">
-            <label htmlFor="email">Email Address</label>
-            <input type="email" id="email" name="email" value={formData.email} onChange={handleChange} required placeholder="you@example.com" />
+          <div>
+            <label className="block text-sm font-semibold text-text-primary mb-2">Email Address</label>
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              required
+              placeholder="you@example.com"
+              className="input-field"
+            />
           </div>
 
-          <div className="form-field">
-            <label htmlFor="password">Password</label>
-            <input type="password" id="password" name="password" value={formData.password} onChange={handleChange} required placeholder="••••••••" />
+          <div>
+            <label className="block text-sm font-semibold text-text-primary mb-2">Password</label>
+            <input
+              type="password"
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              required
+              placeholder="••••••••"
+              className="input-field"
+            />
           </div>
 
-          <div className="form-field">
-            <label htmlFor="confirmPassword">Confirm Password</label>
-            <input type="password" id="confirmPassword" name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} required placeholder="••••••••" />
+          <div>
+            <label className="block text-sm font-semibold text-text-primary mb-2">Confirm Password</label>
+            <input
+              type="password"
+              name="confirmPassword"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              required
+              placeholder="••••••••"
+              className="input-field"
+            />
           </div>
 
           <button type="submit" disabled={loading} className="btn-primary">
@@ -105,19 +142,13 @@ const RegisterPage: React.FC = () => {
           </button>
         </form>
 
-        <p className="auth-subtitle" style={{ marginTop: '18px', textAlign: 'center' }}>
+        <p className="text-center text-sm text-text-secondary mt-6">
           Already have an account?{' '}
-          <Link to="/login" className="auth-link">
+          <Link to="/login" className="font-semibold text-brand hover:text-brand-dark transition-colors">
             Sign in
           </Link>
         </p>
-
-        <Link to="/" className="auth-link" style={{ display: 'inline-flex', marginTop: '14px' }}>
-          ← Back to Home
-        </Link>
       </div>
     </div>
   );
-};
-
-export default RegisterPage;
+}

@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import type { Transaction, TransactionCategory, TransactionType } from '../../../shared/types';
+import { useState } from 'react';
+import type { Transaction, TransactionCategory, TransactionType } from '@shared/types';
+import { createTransaction } from '../services/api';
 
 interface Props {
   onAdd: (transaction: Transaction) => void;
@@ -17,36 +18,45 @@ const categories: TransactionCategory[] = [
   'Other',
 ];
 
-const TransactionForm: React.FC<Props> = ({ onAdd }) => {
+const TransactionForm = ({ onAdd }: Props) => {
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [type, setType] = useState<TransactionType>('expense');
   const [category, setCategory] = useState<TransactionCategory>('Other');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
 
-    const newTransaction: Transaction = {
-      description,
-      amount: parseFloat(amount),
-      type,
-      category,
-      date: new Date().toISOString(),
-    };
+    const parsedAmount = parseFloat(amount);
+    if (!description.trim() || isNaN(parsedAmount) || parsedAmount <= 0) {
+      setError('Please enter a valid description and a positive amount');
+      return;
+    }
 
-    const res = await fetch('http://localhost:5001/api/transactions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newTransaction),
-    });
+    setLoading(true);
 
-    if (res.ok) {
-      const added = await res.json();
+    try {
+      const newTransaction: Transaction = {
+        description: description.trim(),
+        amount: parsedAmount,
+        type,
+        category,
+        date: new Date().toISOString(),
+      };
+
+      const added = await createTransaction(newTransaction);
       onAdd(added);
       setDescription('');
       setAmount('');
       setCategory('Other');
       setType('expense');
+    } catch {
+      setError('Failed to add transaction. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -57,6 +67,12 @@ const TransactionForm: React.FC<Props> = ({ onAdd }) => {
         <h3 className="text-2xl font-bold text-slate-900">New entry</h3>
         <p className="subtle-text">Colorful tracking for income and expenses.</p>
       </div>
+
+      {error && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm mb-4">
+          {error}
+        </div>
+      )}
 
       <div className="space-y-5">
         <div>
@@ -80,6 +96,7 @@ const TransactionForm: React.FC<Props> = ({ onAdd }) => {
             value={amount}
             onChange={e => setAmount(e.target.value)}
             step="0.01"
+            min="0.01"
             required
           />
         </div>
@@ -115,7 +132,9 @@ const TransactionForm: React.FC<Props> = ({ onAdd }) => {
           </select>
         </div>
 
-        <button className="btn-primary mt-6" type="submit">Add Transaction</button>
+        <button className="btn-primary mt-6" type="submit" disabled={loading}>
+          {loading ? 'Adding...' : 'Add Transaction'}
+        </button>
       </div>
     </form>
   );

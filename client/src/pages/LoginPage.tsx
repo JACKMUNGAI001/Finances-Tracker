@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 interface LoginFormData {
   email: string;
   password: string;
 }
 
-const LoginPage: React.FC = () => {
+export default function LoginPage() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [formData, setFormData] = useState<LoginFormData>({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -23,62 +25,65 @@ const LoginPage: React.FC = () => {
     setLoading(true);
 
     try {
-      // Simulated login - replace with actual API call
-      console.log('Login attempt:', formData);
-      
-      // Store user in localStorage (simulated)
-      localStorage.setItem('user', JSON.stringify({ email: formData.email }));
-      localStorage.setItem('isAuthenticated', 'true');
-      
-      // Redirect to dashboard
-      navigate('/dashboard');
-    } catch (err) {
+      if (!formData.email.trim() || !formData.password.trim()) {
+        setError('Please enter both email and password');
+        setLoading(false);
+        return;
+      }
+
+      login({ email: formData.email, name: formData.email.split('@')[0] });
+      navigate('/home');
+    } catch {
       setError('Failed to sign in. Please try again.');
-      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="auth-shell">
-      <div className="auth-card">
-        <p className="auth-badge">Welcome back</p>
-        <h1 className="auth-title">Sign In</h1>
-        <p className="auth-subtitle">Welcome back to Finances Tracker.</p>
+    <div className="min-h-screen bg-app-bg flex items-center justify-center p-6">
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-8">
+          <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-brand to-brand-dark flex items-center justify-center text-white shadow-glow">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+              <polyline points="9 22 9 12 15 12 15 22" />
+            </svg>
+          </div>
+          <h1 className="text-2xl font-extrabold text-text-primary tracking-tight">Welcome back</h1>
+          <p className="text-sm text-text-secondary mt-2">Sign in to continue to your finances</p>
+        </div>
 
-        <form onSubmit={handleSubmit} className="form-stack">
+        <form onSubmit={handleSubmit} className="card p-6 space-y-5">
           {error && (
-            <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+            <div className="p-3 bg-red-50 border border-red-100 rounded-2xl text-red-600 text-sm font-medium">
               {error}
             </div>
           )}
 
-          <div className="form-field">
-            <label htmlFor="email">Email Address</label>
+          <div>
+            <label className="block text-sm font-semibold text-text-primary mb-2">Email Address</label>
             <input
               type="email"
-              id="email"
               name="email"
               value={formData.email}
               onChange={handleChange}
               required
               placeholder="you@example.com"
-              className="app-shell input"
+              className="input-field"
             />
           </div>
 
-          <div className="form-field">
-            <label htmlFor="password">Password</label>
+          <div>
+            <label className="block text-sm font-semibold text-text-primary mb-2">Password</label>
             <input
               type="password"
-              id="password"
               name="password"
               value={formData.password}
               onChange={handleChange}
               required
               placeholder="••••••••"
-              className="app-shell input"
+              className="input-field"
             />
           </div>
 
@@ -87,19 +92,13 @@ const LoginPage: React.FC = () => {
           </button>
         </form>
 
-        <p className="auth-subtitle" style={{ marginTop: '18px', textAlign: 'center' }}>
+        <p className="text-center text-sm text-text-secondary mt-6">
           Don&apos;t have an account?{' '}
-          <Link to="/register" className="auth-link">
+          <Link to="/register" className="font-semibold text-brand hover:text-brand-dark transition-colors">
             Sign up
           </Link>
         </p>
-
-        <Link to="/" className="auth-link" style={{ display: 'inline-flex', marginTop: '14px' }}>
-          ← Back to Home
-        </Link>
       </div>
     </div>
   );
-};
-
-export default LoginPage;
+}

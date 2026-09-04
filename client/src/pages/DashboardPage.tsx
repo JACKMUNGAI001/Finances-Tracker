@@ -1,68 +1,53 @@
-import { useState, useEffect, useMemo } from 'react';
-import type { Transaction } from '../../../shared/types';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import type { Transaction } from '@shared/types';
+import { useAuth } from '../contexts/AuthContext';
+import { fetchTransactions, createTransaction, deleteTransaction } from '../services/api';
 import TransactionForm from '../components/TransactionForm';
 import TransactionList from '../components/TransactionList';
 import ExpenseChart from '../components/ExpenseChart';
-
-const fallbackTransactions: Transaction[] = [
-  { id: 1, description: 'Salary Deposit', amount: 5200, type: 'income', category: 'Salary', date: '2026-07-01T00:00:00.000Z' },
-  { id: 2, description: 'Groceries', amount: 128.45, type: 'expense', category: 'Food', date: '2026-07-03T00:00:00.000Z' },
-  { id: 3, description: 'Rent', amount: 1450, type: 'expense', category: 'Rent', date: '2026-07-05T00:00:00.000Z' },
-  { id: 4, description: 'Streaming', amount: 24.99, type: 'expense', category: 'Entertainment', date: '2026-07-07T00:00:00.000Z' },
-];
 
 const formatCurrency = (value: number) =>
   `KSh ${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 function DashboardPage() {
-  const [transactions, setTransactions] = useState<Transaction[]>(fallbackTransactions);
-  const [user, setUser] = useState<{ name?: string; email: string } | null>(null);
+  const { user, logout } = useAuth();
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    // Get user from localStorage
-    const userStr = localStorage.getItem('user');
-    if (userStr) {
-      setUser(JSON.parse(userStr));
+  const loadTransactions = useCallback(async () => {
+    try {
+      setError(null);
+      const data = await fetchTransactions();
+      setTransactions(data);
+    } catch {
+      setError('Failed to load transactions');
+      setTransactions([]);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    let active = true;
-
-    const loadTransactions = async () => {
-      try {
-        const res = await fetch('http://localhost:5001/api/transactions');
-        if (!res.ok) throw new Error('Unable to load transactions');
-
-        const data = await res.json();
-        if (active) {
-          setTransactions(Array.isArray(data) && data.length > 0 ? data : fallbackTransactions);
-        }
-      } catch {
-        if (active) {
-          setTransactions(fallbackTransactions);
-        }
-      }
-    };
-
     loadTransactions();
-    return () => {
-      active = false;
-    };
-  }, []);
+  }, [loadTransactions]);
 
-  const addTransaction = (newTransaction: Transaction) => {
-    setTransactions(prev => [newTransaction, ...prev]);
+  const addTransaction = async (newTransaction: Transaction) => {
+    try {
+      const added = await createTransaction(newTransaction);
+      setTransactions(prev => [added, ...prev]);
+    } catch {
+      setError('Failed to add transaction');
+    }
   };
 
-  const deleteTransaction = async (id: number) => {
+  const handleDelete = async (id: number) => {
     try {
-      await fetch(`http://localhost:5001/api/transactions/${id}`, { method: 'DELETE' });
+      await deleteTransaction(id);
+      setTransactions(prev => prev.filter(t => t.id !== id));
     } catch {
-      // fall through and update UI locally
+      setError('Failed to delete transaction');
     }
-
-    setTransactions(prev => prev.filter(t => t.id !== id));
   };
 
   const totals = useMemo(() => {
@@ -101,46 +86,60 @@ function DashboardPage() {
                 <p className="profile-name">{user?.name || 'User'}</p>
               </div>
             </div>
+            <button onClick={logout} className="btn-view" style={{ marginLeft: '8px' }}>
+              Logout
+            </button>
           </div>
         </header>
 
-        <div className="content-grid">
-          <div className="left-column">
-            <section className="hero-card">
-              <div className="hero-top">
-                <div>
-                  <p className="hero-label">Total Balance</p>
-                  <h2 className="balance-value">{formatCurrency(balance)}</h2>
-                </div>
-                <div className="hero-badge">
-                  <p className="badge-label">Accounts</p>
-                  <p className="badge-value">{transactions.length}</p>
-                  <p className="badge-caption">Recent items</p>
-                </div>
-              </div>
-
-              <div className="stat-grid">
-                <div className="stat-card">
-                  <p className="stat-label">Total Salary</p>
-                  <p className="stat-value">{formatCurrency(totals.income)}</p>
-                  <p className="stat-caption">Bank account</p>
-                </div>
-                <div className="stat-card">
-                  <p className="stat-label">Total Expense</p>
-                  <p className="stat-value">{formatCurrency(totals.expense)}</p>
-                  <p className="stat-caption">Credit card</p>
-                </div>
-              </div>
-            </section>
-
-            <ExpenseChart transactions={transactions} />
+        {error && (
+          <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm mb-4">
+            {error}
+            <button onClick={() => setError(null)} className="ml-2 font-bold">Dismiss</button>
           </div>
+        )}
 
-          <div className="right-column">
-            <TransactionForm onAdd={addTransaction} />
-            <TransactionList transactions={transactions} onDelete={deleteTransaction} />
+        {loading ? (
+          <div className="text-center py-12 text-slate-500">Loading transactions...</div>
+        ) : (
+          <div className="content-grid">
+            <div className="left-column">
+              <section className="hero-card">
+                <div className="hero-top">
+                  <div>
+                    <p className="hero-label">Total Balance</p>
+                    <h2 className="balance-value">{formatCurrency(balance)}</h2>
+                  </div>
+                  <div className="hero-badge">
+                    <p className="badge-label">Accounts</p>
+                    <p className="badge-value">{transactions.length}</p>
+                    <p className="badge-caption">Recent items</p>
+                  </div>
+                </div>
+
+                <div className="stat-grid">
+                  <div className="stat-card">
+                    <p className="stat-label">Total Income</p>
+                    <p className="stat-value">{formatCurrency(totals.income)}</p>
+                    <p className="stat-caption">Bank account</p>
+                  </div>
+                  <div className="stat-card">
+                    <p className="stat-label">Total Expense</p>
+                    <p className="stat-value">{formatCurrency(totals.expense)}</p>
+                    <p className="stat-caption">Credit card</p>
+                  </div>
+                </div>
+              </section>
+
+              <ExpenseChart transactions={transactions} />
+            </div>
+
+            <div className="right-column">
+              <TransactionForm onAdd={addTransaction} />
+              <TransactionList transactions={transactions} onDelete={handleDelete} />
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

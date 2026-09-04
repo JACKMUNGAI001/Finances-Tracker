@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Transaction } from '../../../shared/types';
+import type { Transaction } from '@shared/types';
 
 interface Props {
   transactions: Transaction[];
