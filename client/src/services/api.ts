@@ -1,6 +1,8 @@
 import type { Transaction } from '@shared/types';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+// On a phone opened through Vite's network URL, localhost would point to the
+// phone itself. Use the same host as the page unless a deployed API is supplied.
+const API_BASE = import.meta.env.VITE_API_URL || `${window.location.protocol}//${window.location.hostname}:5001/api`;
 
 export async function fetchTransactions(): Promise<Transaction[]> {
   const res = await fetch(`${API_BASE}/transactions`);
