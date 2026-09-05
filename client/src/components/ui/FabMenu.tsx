@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import TransactionSheet from './TransactionSheet';
 import BottomSheet from './BottomSheet';
+import { useSettings } from '../../contexts/SettingsContext';
 import type { Transaction } from '@shared/types';
 
 interface FabAction {
@@ -17,6 +18,7 @@ interface FabMenuProps {
 }
 
 export default function FabMenu({ onAddTransaction }: FabMenuProps) {
+  const { t, currency } = useSettings();
   const navigate = useNavigate();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [sheetMode, setSheetMode] = useState<'expense' | 'income'>('expense');
@@ -24,9 +26,9 @@ export default function FabMenu({ onAddTransaction }: FabMenuProps) {
   const [transferOpen, setTransferOpen] = useState(false);
   const [transferComplete, setTransferComplete] = useState(false);
 
-  const actions: FabAction[] = [
+  const actions: FabAction[] = useMemo(() => [
     {
-      label: 'Add Expense',
+      label: t('add_expense'),
       icon: '−',
       color: '#EF4444',
       bgColor: 'bg-red-50',
@@ -37,7 +39,7 @@ export default function FabMenu({ onAddTransaction }: FabMenuProps) {
       },
     },
     {
-      label: 'Add Income',
+      label: t('add_income'),
       icon: '+',
       color: '#22C55E',
       bgColor: 'bg-emerald-50',
@@ -48,7 +50,7 @@ export default function FabMenu({ onAddTransaction }: FabMenuProps) {
       },
     },
     {
-      label: 'Transfer Money',
+      label: t('transfer_money'),
       icon: '⇄',
       color: '#8B5CF6',
       bgColor: 'bg-violet-50',
@@ -59,7 +61,7 @@ export default function FabMenu({ onAddTransaction }: FabMenuProps) {
       },
     },
     {
-      label: 'Create Budget',
+      label: t('create_budget'),
       icon: '☐',
       color: '#F59E0B',
       bgColor: 'bg-amber-50',
@@ -69,7 +71,7 @@ export default function FabMenu({ onAddTransaction }: FabMenuProps) {
       },
     },
     {
-      label: 'Create Goal',
+      label: t('create_goal'),
       icon: '★',
       color: '#3B82F6',
       bgColor: 'bg-blue-50',
@@ -78,7 +80,7 @@ export default function FabMenu({ onAddTransaction }: FabMenuProps) {
         setMenuOpen(false);
       },
     },
-  ];
+  ], [t, navigate]);
 
   return (
     <>
@@ -87,7 +89,7 @@ export default function FabMenu({ onAddTransaction }: FabMenuProps) {
         <button
           onClick={() => setMenuOpen(!menuOpen)}
           className={`nav-fab transition-transform duration-300 ${menuOpen ? 'rotate-45' : ''}`}
-          aria-label="Add"
+          aria-label={t('add_transaction')}
         >
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="12" y1="5" x2="12" y2="19" />
@@ -134,16 +136,16 @@ export default function FabMenu({ onAddTransaction }: FabMenuProps) {
 
       <BottomSheet open={transferOpen} onClose={() => setTransferOpen(false)}>
         <form className="px-5 pb-8" onSubmit={(event) => { event.preventDefault(); setTransferComplete(true); }}>
-          <h2 className="text-xl font-bold text-text-primary">Transfer money</h2>
-          <p className="mt-1 text-sm text-text-secondary">Move money between your tracked accounts.</p>
+          <h2 className="text-xl font-bold text-text-primary">{t('transfer_money')}</h2>
+          <p className="mt-1 text-sm text-text-secondary">{t('move_money')}</p>
           {transferComplete ? (
-            <div className="mt-6 rounded-2xl bg-emerald-50 p-4 text-sm font-semibold text-emerald-700">Transfer recorded successfully.</div>
+            <div className="mt-6 rounded-2xl bg-emerald-50 p-4 text-sm font-semibold text-emerald-700">{t('transfer_recorded')}</div>
           ) : <>
-            <label className="mt-6 block text-sm font-semibold text-text-primary">From</label><select className="input-field mt-2"><option>Main account</option><option>Cash</option></select>
-            <label className="mt-4 block text-sm font-semibold text-text-primary">To</label><select className="input-field mt-2"><option>Cash</option><option>Savings</option></select>
-            <label className="mt-4 block text-sm font-semibold text-text-primary">Amount (KSh)</label><input className="input-field mt-2" type="number" min="1" inputMode="decimal" required placeholder="0" />
+            <label className="mt-6 block text-sm font-semibold text-text-primary">{t('from')}</label><select className="input-field mt-2"><option>Main account</option><option>Cash</option></select>
+            <label className="mt-4 block text-sm font-semibold text-text-primary">{t('to')}</label><select className="input-field mt-2"><option>Cash</option><option>Savings</option></select>
+            <label className="mt-4 block text-sm font-semibold text-text-primary">{t('amount')} ({currency.symbol})</label><input className="input-field mt-2" type="number" min="1" inputMode="decimal" required placeholder="0" />
           </>}
-          <button className="btn-primary mt-6" type="submit" onClick={transferComplete ? () => setTransferOpen(false) : undefined}>{transferComplete ? 'Done' : 'Transfer money'}</button>
+          <button className="btn-primary mt-6" type="submit" onClick={transferComplete ? () => setTransferOpen(false) : undefined}>{transferComplete ? t('done') : t('transfer')}</button>
         </form>
       </BottomSheet>
     </>

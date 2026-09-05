@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import type { Transaction, TransactionCategory, TransactionType } from '@shared/types';
-import { createTransaction } from '../../services/api';
+import { updateTransaction } from '../../services/api';
 import { useSettings } from '../../contexts/SettingsContext';
 
-interface TransactionSheetProps {
+interface EditTransactionSheetProps {
   open: boolean;
   onClose: () => void;
   onSuccess: (transaction: Transaction) => void;
-  initialType?: TransactionType;
+  transaction: Transaction | null;
 }
 
 const categories: { value: TransactionCategory; label: string; icon: string; color: string }[] = [
@@ -22,25 +22,25 @@ const categories: { value: TransactionCategory; label: string; icon: string; col
   { value: 'Other', label: 'Other', icon: '📦', color: '#6B7280' },
 ];
 
-export default function TransactionSheet({ open, onClose, onSuccess, initialType = 'expense' }: TransactionSheetProps) {
+export default function EditTransactionSheet({ open, onClose, onSuccess, transaction }: EditTransactionSheetProps) {
   const { t } = useSettings();
-  const [type, setType] = useState<TransactionType>(initialType);
+  const [type, setType] = useState<TransactionType>('expense');
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState<TransactionCategory>(initialType === 'income' ? 'Salary' : 'Food');
+  const [category, setCategory] = useState<TransactionCategory>('Food');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (open) {
-      setAmount('');
-      setDescription('');
-      setType(initialType);
-      setCategory(initialType === 'income' ? 'Salary' : 'Food');
+    if (open && transaction) {
+      setType(transaction.type);
+      setAmount(transaction.amount.toString());
+      setDescription(transaction.description);
+      setCategory(transaction.type === 'income' ? 'Salary' : (transaction.category as TransactionCategory || 'Food'));
       setError(null);
       setLoading(false);
     }
-  }, [open, initialType]);
+  }, [open, transaction]);
 
   const handleTypeChange = (newType: TransactionType) => {
     setType(newType);
@@ -53,6 +53,7 @@ export default function TransactionSheet({ open, onClose, onSuccess, initialType
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!transaction?.id) return;
     setError(null);
 
     const parsedAmount = parseFloat(amount);
@@ -63,30 +64,29 @@ export default function TransactionSheet({ open, onClose, onSuccess, initialType
 
     setLoading(true);
     try {
-      const newTransaction = {
+      const updated = await updateTransaction(transaction.id, {
         description: description.trim() || 'No description',
         amount: parsedAmount,
         type,
         category,
-        date: new Date().toISOString(),
-      };
-      const added = await createTransaction(newTransaction);
-      onSuccess(added);
+        date: transaction.date,
+      });
+      onSuccess(updated);
       onClose();
     } catch {
-      setError('Failed to save. Please try again.');
+      setError('Failed to update transaction. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  if (!open) return null;
+  if (!open || !transaction) return null;
 
   return (
     <div className="px-5 pb-8">
       <div className="mb-6">
-        <h3 className="text-xl font-bold text-text-primary">{t('add_new_transaction')}</h3>
-        <p className="text-sm text-text-secondary mt-1">{t('track_transaction')}</p>
+        <h3 className="text-xl font-bold text-text-primary">{t('edit_transaction')}</h3>
+        <p className="text-sm text-text-secondary mt-1">{t('update_transaction')}</p>
       </div>
 
       {error && (
@@ -129,6 +129,7 @@ export default function TransactionSheet({ open, onClose, onSuccess, initialType
               className="input-field pl-14"
               step="0.01"
               min="0.01"
+              required
             />
           </div>
         </div>
@@ -142,6 +143,9 @@ export default function TransactionSheet({ open, onClose, onSuccess, initialType
               onChange={(e) => setDescription(e.target.value)}
               className="input-field"
             />
+          {type === 'expense' && (
+            <p className="text-[10px] text-text-secondary mt-1">Describe what the expense was for</p>
+          )}
         </div>
 
         {type === 'expense' && (
@@ -170,7 +174,7 @@ export default function TransactionSheet({ open, onClose, onSuccess, initialType
         )}
 
         <button type="submit" disabled={loading} className="btn-primary mt-6">
-          {loading ? t('saving') : t('save_transaction')}
+          {loading ? t('saving') : t('save_changes')}
         </button>
       </form>
     </div>

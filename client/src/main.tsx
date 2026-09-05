@@ -2,8 +2,10 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
+import { SettingsProvider } from './contexts/SettingsContext'
 import './index.css'
 import HomeScreen from './pages/HomeScreen'
+import ProfilePage from './pages/ProfilePage'
 import ReportsScreen from './pages/ReportsScreen'
 import PlanScreen from './pages/PlanScreen'
 import SettingsScreen from './pages/SettingsScreen'
@@ -47,6 +49,10 @@ const router = createBrowserRouter([
     element: <ProtectedRoute><TransactionsPage /></ProtectedRoute>
   },
   {
+    path: '/profile',
+    element: <ProtectedRoute><ProfilePage /></ProtectedRoute>
+  },
+  {
     path: '/settings',
     element: <ProtectedRoute><SettingsScreen /></ProtectedRoute>
   },
@@ -63,7 +69,9 @@ const router = createBrowserRouter([
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <AuthProvider>
-      <RouterProvider router={router} />
+      <SettingsProvider>
+        <RouterProvider router={router} />
+      </SettingsProvider>
     </AuthProvider>
   </StrictMode>,
 )

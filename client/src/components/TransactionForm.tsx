@@ -6,10 +6,9 @@ interface Props {
   onAdd: (transaction: Transaction) => void;
 }
 
-const categories: TransactionCategory[] = [
+const expenseCategories: TransactionCategory[] = [
   'Food',
   'Rent',
-  'Salary',
   'Entertainment',
   'Transport',
   'Utilities',
@@ -31,8 +30,8 @@ const TransactionForm = ({ onAdd }: Props) => {
     setError(null);
 
     const parsedAmount = parseFloat(amount);
-    if (!description.trim() || isNaN(parsedAmount) || parsedAmount <= 0) {
-      setError('Please enter a valid description and a positive amount');
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      setError('Please enter a valid amount');
       return;
     }
 
@@ -40,10 +39,10 @@ const TransactionForm = ({ onAdd }: Props) => {
 
     try {
       const newTransaction: Transaction = {
-        description: description.trim(),
+        description: description.trim() || 'No description',
         amount: parsedAmount,
         type,
-        category,
+        category: type === 'income' ? 'Salary' : category,
         date: new Date().toISOString(),
       };
 
@@ -76,15 +75,26 @@ const TransactionForm = ({ onAdd }: Props) => {
 
       <div className="space-y-5">
         <div>
-          <label className="block text-sm font-semibold text-slate-700 mb-2">Description</label>
-          <input
-            className="w-full rounded-14px border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
-            type="text"
-            placeholder="Enter description"
-            value={description}
-            onChange={e => setDescription(e.target.value)}
-            required
-          />
+          <label className="block text-sm font-semibold text-slate-700 mb-2">Type</label>
+          <div className="type-switch">
+            {(['expense', 'income'] as TransactionType[]).map(item => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => {
+                  setType(item);
+                  if (item === 'income') {
+                    setCategory('Salary');
+                  } else if (category === 'Salary') {
+                    setCategory('Other');
+                  }
+                }}
+                className={type === item ? 'active' : ''}
+              >
+                {item === 'expense' ? 'Expense' : 'Income'}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div>
@@ -102,35 +112,32 @@ const TransactionForm = ({ onAdd }: Props) => {
         </div>
 
         <div>
-          <label className="block text-sm font-semibold text-slate-700 mb-3">Type</label>
-          <div className="type-switch">
-            {(['expense', 'income'] as TransactionType[]).map(item => (
-              <button
-                key={item}
-                type="button"
-                onClick={() => setType(item)}
-                className={type === item ? 'active' : ''}
-              >
-                {item === 'expense' ? 'Expense' : 'Income'}
-              </button>
-            ))}
-          </div>
+          <label className="block text-sm font-semibold text-slate-700 mb-2">Description</label>
+          <input
+            className="w-full rounded-14px border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+            type="text"
+            placeholder="Enter description (optional)"
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+          />
         </div>
 
-        <div>
-          <label className="block text-sm font-semibold text-slate-700 mb-2">Category</label>
-          <select
-            className="w-full rounded-14px border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
-            value={category}
-            onChange={e => setCategory(e.target.value as TransactionCategory)}
-          >
-            {categories.map(cat => (
-              <option key={cat} value={cat}>
-                {cat}
-              </option>
-            ))}
-          </select>
-        </div>
+        {type === 'expense' && (
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">Category</label>
+            <select
+              className="w-full rounded-14px border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+              value={category}
+              onChange={e => setCategory(e.target.value as TransactionCategory)}
+            >
+              {expenseCategories.map(cat => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <button className="btn-primary mt-6" type="submit" disabled={loading}>
           {loading ? 'Adding...' : 'Add Transaction'}

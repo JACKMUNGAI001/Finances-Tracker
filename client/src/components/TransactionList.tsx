@@ -1,5 +1,6 @@
 import React from 'react';
 import type { Transaction } from '@shared/types';
+import { useSettings } from '../contexts/SettingsContext';
 
 interface Props {
   transactions: Transaction[];
@@ -7,19 +8,20 @@ interface Props {
 }
 
 const TransactionList: React.FC<Props> = ({ transactions, onDelete }) => {
+  const { formatCurrency, t } = useSettings();
   return (
     <section className="transactions-card">
       <div className="section-head">
         <div className="mb-4">
-          <p className="eyebrow">Transactions</p>
-          <h3 className="text-2xl font-bold text-slate-900">Recent activity</h3>
+          <p className="eyebrow">{t('transactions')}</p>
+          <h3 className="text-2xl font-bold text-slate-900">{t('recent_items')}</h3>
         </div>
-        <button className="btn-view">View all</button>
+        <button className="btn-view">{t('view_all')}</button>
       </div>
 
       {transactions.length === 0 ? (
         <div className="rounded-[1.5rem] border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-500">
-          Add your first transaction to get started.
+          {t('start_tracking')}
         </div>
       ) : (
         <ul className="space-y-4 mt-4">
@@ -34,15 +36,15 @@ const TransactionList: React.FC<Props> = ({ transactions, onDelete }) => {
               </div>
               <div className="amount-wrap">
                 <p className={`amount ${t.type}`}>
-                  {t.type === 'income' ? '+' : '-'}KSh {t.amount.toFixed(2)}
+                  {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}
                 </p>
-                <p className="detail-pill">{t.type}</p>
+                <p className="detail-pill">{t.type === 'income' ? t('income') : t('expense')}</p>
               </div>
               <button
                 className="text-sm font-semibold text-rose-500 transition hover:text-rose-600 ml-2"
                 onClick={() => t.id && onDelete(t.id)}
               >
-                Delete
+                {t('delete')}
               </button>
             </li>
           ))}

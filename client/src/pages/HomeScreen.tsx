@@ -1,15 +1,13 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useSettings } from '../contexts/SettingsContext';
 import BottomNav from '../components/BottomNav';
 import FabMenu from '../components/ui/FabMenu';
 import TransactionDetail from '../components/ui/TransactionDetail';
 import BottomSheet from '../components/ui/BottomSheet';
 import type { Transaction } from '@shared/types';
 import { fetchTransactions, createTransaction, deleteTransaction } from '../services/api';
-
-const formatCurrency = (value: number) =>
-  `KSh ${value.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const categoryMeta: Record<string, { icon: string; color: string }> = {
   Food: { icon: '🍔', color: '#3B82F6' },
@@ -25,6 +23,7 @@ const categoryMeta: Record<string, { icon: string; color: string }> = {
 
 export default function HomeScreen() {
   const { user } = useAuth();
+  const { formatCurrency, t } = useSettings();
   const navigate = useNavigate();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -89,9 +88,13 @@ export default function HomeScreen() {
           <div className="absolute inset-0 bg-[linear-gradient(132deg,transparent_37%,rgba(255,255,255,.11)_37%,rgba(255,255,255,.05)_60%,transparent_60%)]" />
           <div className="relative z-10 flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-white/70 bg-white/20 text-sm font-bold shadow-sm">
+              <button
+                onClick={() => navigate('/profile')}
+                className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-white/70 bg-white/20 text-sm font-bold shadow-sm hover:bg-white/30 transition-colors"
+                aria-label="View profile"
+              >
                 {user?.name?.charAt(0) || 'J'}
-              </div>
+              </button>
               <button onClick={() => setSheet('month')} className="flex items-center gap-1 rounded-full bg-white/15 px-3 py-2 text-[10px] font-semibold backdrop-blur-sm">
                 {selectedMonth}
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="m6 9 6 6 6-6" /></svg>
@@ -106,12 +109,12 @@ export default function HomeScreen() {
             </button>
           </div>
           <div className="relative z-10 mt-7 text-center">
-            <p className="mb-1 text-[10px] font-medium text-white/80">Current Balance</p>
+            <p className="mb-1 text-[10px] font-medium text-white/80">{t('balance')}</p>
             <h1 className="text-[31px] font-extrabold tracking-tight">
               {loading ? '...' : formatCurrency(balance)}
             </h1>
             <p className="mt-1 text-[10px] font-medium text-white/85">
-              +KSh 784 more than last month
+              +{t('more_than_last_month')}
             </p>
           </div>
         </section>
@@ -119,8 +122,13 @@ export default function HomeScreen() {
         {/* Your Money overlaps the hero like the reference design. */}
         <section className="relative z-20 -mt-12 rounded-t-[25px] bg-white px-4 pb-1 pt-4 shadow-[0_-4px_18px_rgba(36,25,68,.05)]">
           <div className="mb-3 flex items-center justify-between px-1">
-            <h2 className="text-[13px] font-bold text-text-primary">Your Money <span className="ml-0.5 text-text-muted">ⓘ</span></h2>
-            <span className="rounded-full bg-[#f7f7f8] px-2.5 py-1 text-[9px] font-medium text-text-secondary">Details ›</span>
+            <h2 className="text-[13px] font-bold text-text-primary">{t('your_money')} <span className="ml-0.5 text-text-muted">ⓘ</span></h2>
+             <button
+               onClick={() => navigate('/transactions')}
+               className="rounded-full bg-[#f7f7f8] px-2.5 py-1 text-[9px] font-medium text-text-secondary hover:bg-[#ebebee] transition-colors"
+             >
+               Details ›
+             </button>
           </div>
           <div className="grid grid-cols-2 gap-2.5">
             <div className="rounded-[16px] border border-[#f0f0f2] bg-white p-3 shadow-[0_3px_12px_rgba(17,24,39,.04)]">
@@ -131,7 +139,7 @@ export default function HomeScreen() {
                 </svg>
               </div>
               <div>
-                <p className="text-[10px] text-text-secondary">Income ⓘ</p>
+                <p className="text-[10px] text-text-secondary">{t('income')} ⓘ</p>
                 <p className="mt-0.5 text-[14px] font-bold text-text-primary">
                   {loading ? '...' : formatCurrency(totals.income)}
                 </p>
@@ -145,7 +153,7 @@ export default function HomeScreen() {
                 </svg>
               </div>
               <div>
-                <p className="text-[10px] text-text-secondary">Expenses ⓘ</p>
+                <p className="text-[10px] text-text-secondary">{t('expense')} ⓘ</p>
                 <p className="mt-0.5 text-[14px] font-bold text-text-primary">
                   {loading ? '...' : formatCurrency(totals.expense)}
                 </p>
@@ -163,27 +171,27 @@ export default function HomeScreen() {
               </svg>
             </div>
             <div>
-              <p className="text-[10px] font-semibold text-white">Your insight is ready</p>
-              <p className="text-[9px] text-gray-400">Your monthly overview</p>
+              <p className="text-[10px] font-semibold text-white">{t('your_insight')}</p>
+              <p className="text-[9px] text-gray-400">{t('monthly_overview')}</p>
             </div>
           </div>
           <button
             onClick={() => navigate('/reports')}
             className="rounded-full bg-white/10 px-3 py-1.5 text-[9px] font-semibold text-white transition-colors hover:bg-white/20"
           >
-            View
+            {t('view')}
           </button>
         </div>
 
         {/* Transactions Section */}
         <div className="mt-5 px-1">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-[13px] font-bold text-text-primary">Transactions</h3>
-            <button
-              onClick={() => navigate('/transactions')}
-              className="rounded-full bg-[#f3edff] px-2.5 py-1 text-[9px] font-semibold text-brand hover:text-brand-dark transition-colors"
-            >
-              See All
+             <h3 className="text-[13px] font-bold text-text-primary">{t('transactions')}</h3>
+             <button
+               onClick={() => navigate('/transactions')}
+               className="rounded-full bg-[#f3edff] px-2.5 py-1 text-[9px] font-semibold text-brand hover:text-brand-dark transition-colors"
+             >
+               {t('see_all')}
             </button>
           </div>
 
@@ -205,9 +213,9 @@ export default function HomeScreen() {
               <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-brand-soft flex items-center justify-center text-3xl">
                 📊
               </div>
-              <p className="text-sm font-semibold text-text-primary mb-1">No transactions yet</p>
-              <p className="text-xs text-text-secondary mb-4">Start tracking your spending</p>
-              <p className="text-xs text-text-muted">Tap the + button to add one</p>
+              <p className="text-sm font-semibold text-text-primary mb-1">{t('no_transactions')}</p>
+              <p className="text-xs text-text-secondary mb-4">{t('start_tracking')}</p>
+              <p className="text-xs text-text-muted">{t('add_transaction')}</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -256,16 +264,16 @@ export default function HomeScreen() {
         <div className="px-5 pb-8">
           {sheet === 'notifications' ? (
             <>
-              <h2 className="text-xl font-bold text-text-primary">Notifications</h2>
-              <p className="mt-1 text-sm text-text-secondary">Keep up with your money.</p>
-              <div className="mt-5 space-y-3">
-                <div className="rounded-2xl bg-brand-soft p-4"><p className="text-sm font-semibold text-text-primary">Monthly report is ready</p><p className="mt-1 text-xs text-text-secondary">Review your spending for this month.</p></div>
-                <div className="rounded-2xl bg-gray-50 p-4"><p className="text-sm font-semibold text-text-primary">Budget reminder</p><p className="mt-1 text-xs text-text-secondary">Set a goal in My Plan to start tracking progress.</p></div>
+          <h2 className="text-xl font-bold text-text-primary">{t('notifications')}</h2>
+          <p className="mt-1 text-sm text-text-secondary">{t('keep_up')}</p>
+          <div className="mt-5 space-y-3">
+            <div className="rounded-2xl bg-brand-soft p-4"><p className="text-sm font-semibold text-text-primary">{t('monthly_report')}</p><p className="mt-1 text-xs text-text-secondary">{t('monthly_report_desc')}</p></div>
+            <div className="rounded-2xl bg-gray-50 p-4"><p className="text-sm font-semibold text-text-primary">{t('budget_reminder')}</p><p className="mt-1 text-xs text-text-secondary">{t('budget_reminder_desc')}</p></div>
               </div>
             </>
           ) : (
             <>
-              <h2 className="text-xl font-bold text-text-primary">Choose month</h2>
+              <h2 className="text-xl font-bold text-text-primary">{t('choose_month')}</h2>
               <div className="mt-5 grid grid-cols-2 gap-3">
                 {['July 2026', 'August 2026', 'September 2026', 'October 2026'].map((month) => (
                   <button key={month} onClick={() => { setSelectedMonth(month); setSheet(null); }} className={`rounded-2xl px-3 py-4 text-sm font-semibold ${selectedMonth === month ? 'bg-brand text-white shadow-glow' : 'bg-gray-50 text-text-primary'}`}>{month}</button>

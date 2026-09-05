@@ -1,4 +1,5 @@
 import type { Transaction } from '@shared/types';
+import { useSettings } from '../../contexts/SettingsContext';
 
 interface TransactionDetailProps {
   transaction: Transaction;
@@ -19,6 +20,7 @@ const categoryMeta: Record<string, { icon: string; color: string }> = {
 };
 
 export default function TransactionDetail({ transaction, onClose, onDelete }: TransactionDetailProps) {
+  const { t, formatCurrency, language } = useSettings();
   const meta = categoryMeta[transaction.category] || categoryMeta.Other;
   const isIncome = transaction.type === 'income';
 
@@ -48,19 +50,19 @@ export default function TransactionDetail({ transaction, onClose, onDelete }: Tr
             >
               {meta.icon}
             </div>
-            <p className="text-2xl font-bold text-text-primary mb-1">
-              {isIncome ? '+' : '-'}KSh {transaction.amount.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </p>
-            <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${isIncome ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-500'}`}>
-              {transaction.type === 'income' ? 'Income' : 'Expense'}
-            </span>
+             <p className="text-2xl font-bold text-text-primary mb-1">
+               {isIncome ? '+' : '-'}{formatCurrency(transaction.amount)}
+             </p>
+             <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${isIncome ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-500'}`}>
+               {transaction.type === 'income' ? t('income') : t('expense')}
+             </span>
           </div>
 
           <div className="space-y-4">
             {[
-              { label: 'Description', value: transaction.description },
-              { label: 'Category', value: transaction.category },
-              { label: 'Date', value: new Date(transaction.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) },
+              { label: t('description'), value: transaction.description },
+              { label: t('category'), value: transaction.category },
+              { label: t('date'), value: new Date(transaction.date).toLocaleDateString(language === 'sw' ? 'sw-KE' : 'en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) },
             ].map((item) => (
               <div key={item.label} className="flex items-center justify-between py-3 border-b border-gray-100">
                 <span className="text-sm text-text-secondary">{item.label}</span>
@@ -74,7 +76,7 @@ export default function TransactionDetail({ transaction, onClose, onDelete }: Tr
               onClick={onClose}
               className="flex-1 py-3.5 rounded-full border border-gray-200 text-sm font-semibold text-text-secondary hover:bg-gray-50 transition-colors"
             >
-              Close
+              {t('close')}
             </button>
             <button
               onClick={() => {
@@ -85,7 +87,7 @@ export default function TransactionDetail({ transaction, onClose, onDelete }: Tr
               }}
               className="flex-1 py-3.5 rounded-full bg-red-50 text-red-500 text-sm font-semibold hover:bg-red-100 transition-colors"
             >
-              Delete
+              {t('delete')}
             </button>
           </div>
         </div>

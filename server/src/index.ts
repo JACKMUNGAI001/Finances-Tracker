@@ -80,6 +80,81 @@ app.delete('/api/transactions/:id', (req, res) => {
   });
 });
 
+app.put('/api/transactions/:id', (req, res) => {
+  const { id } = req.params;
+
+  if (!id || isNaN(Number(id))) {
+    res.status(400).json({ error: 'Invalid transaction ID' });
+    return;
+  }
+
+  const { description, amount, type, category, date }: Partial<Transaction> = req.body;
+
+  const fields: string[] = [];
+  const values: unknown[] = [];
+
+  if (description !== undefined) {
+    if (typeof description !== 'string' || !description.trim()) {
+      res.status(400).json({ error: 'Description must be a non-empty string' });
+      return;
+    }
+    fields.push(`description = ?`);
+    values.push(description.trim());
+  }
+
+  if (amount !== undefined) {
+    if (typeof amount !== 'number' || amount <= 0 || !isFinite(amount)) {
+      res.status(400).json({ error: 'Amount must be a positive number' });
+      return;
+    }
+    fields.push(`amount = ?`);
+    values.push(amount);
+  }
+
+  if (type !== undefined) {
+    if (!['income', 'expense'].includes(type)) {
+      res.status(400).json({ error: 'Type must be either income or expense' });
+      return;
+    }
+    fields.push(`type = ?`);
+    values.push(type);
+  }
+
+  if (category !== undefined) {
+    if (typeof category !== 'string') {
+      res.status(400).json({ error: 'Category is required' });
+      return;
+    }
+    fields.push(`category = ?`);
+    values.push(category);
+  }
+
+  if (date !== undefined) {
+    if (typeof date !== 'string') {
+      res.status(400).json({ error: 'Date is required' });
+      return;
+    }
+    fields.push(`date = ?`);
+    values.push(date);
+  }
+
+  if (fields.length === 0) {
+    res.status(400).json({ error: 'No valid fields to update' });
+    return;
+  }
+
+  const query = `UPDATE transactions SET ${fields.join(', ')} WHERE id = ?`;
+  values.push(Number(id));
+
+  db.run(query, values, function(err: Error | null) {
+    if (err) {
+      res.status(500).json({ error: 'Failed to update transaction' });
+      return;
+    }
+    res.json({ message: 'Updated successfully', changes: this.changes });
+  });
+});
+
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error('Unhandled error:', err);
   res.status(500).json({ error: 'Internal server error' });

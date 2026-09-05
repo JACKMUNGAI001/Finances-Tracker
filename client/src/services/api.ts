@@ -17,3 +17,17 @@ export async function deleteTransaction(id: string | number): Promise<void> {
   const { error } = await supabase.from('transactions').delete().eq('id', id);
   if (error) throw error;
 }
+
+export async function updateTransaction(
+  id: string | number,
+  updates: Omit<Partial<Transaction>, 'id'>
+): Promise<Transaction> {
+  const { data, error } = await supabase
+    .from('transactions')
+    .update(updates)
+    .eq('id', id)
+    .select('id, description, amount, type, category, date')
+    .single();
+  if (error) throw error;
+  return data as Transaction;
+}

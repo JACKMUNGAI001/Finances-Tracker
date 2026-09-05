@@ -8,6 +8,7 @@ import {
 } from 'chart.js';
 import BottomNav from '../components/BottomNav';
 import FabMenu from '../components/ui/FabMenu';
+import { useSettings } from '../contexts/SettingsContext';
 
 ChartJS.register(ArcElement, Tooltip);
 
@@ -17,6 +18,7 @@ const totalExpenses = categories.reduce((sum, c) => sum + c.amount, 0);
 
 export default function ReportsScreen() {
   const navigate = useNavigate();
+  const { currency, formatCurrency, t } = useSettings();
   const [activeTab, setActiveTab] = useState<'expenses' | 'income'>('expenses');
 
   const chartData = useMemo(() => ({
@@ -49,12 +51,12 @@ export default function ReportsScreen() {
         callbacks: {
           label: (ctx: { label?: string; parsed?: number }) => {
             const value = ctx.parsed ?? 0;
-            return ` KSh ${value.toLocaleString('en-KE', { minimumFractionDigits: 2 })}`;
+            return ` ${currency.symbol} ${value.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
           },
         },
       },
     },
-  }), []);
+  }), [currency.symbol]);
 
   return (
     <div className="app-shell">
@@ -72,13 +74,13 @@ export default function ReportsScreen() {
               </svg>
             </button>
             <div>
-              <p className="text-xs text-text-secondary font-medium">Finance</p>
-              <h1 className="text-[24px] font-bold text-text-primary tracking-tight">Report</h1>
+              <p className="text-xs text-text-secondary font-medium">{t('finance')}</p>
+              <h1 className="text-[24px] font-bold text-text-primary tracking-tight">{t('report')}</h1>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <button className="px-3 py-2 rounded-full bg-white shadow-card border border-border-light text-xs font-semibold text-text-secondary flex items-center gap-1.5">
-              August 2026
+              {t('august_2026')}
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="6 9 12 15 18 9" />
               </svg>
@@ -105,13 +107,13 @@ export default function ReportsScreen() {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`flex-1 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 ${
+              className={`flex-1 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 capitalize ${
                 activeTab === tab
                   ? 'bg-white text-text-primary shadow-sm'
                   : 'text-text-secondary hover:text-text-primary'
               }`}
             >
-              {tab === 'expenses' ? 'Expenses' : 'Income'}
+              {tab === 'expenses' ? t('expense') : t('income')}
             </button>
           ))}
         </div>
@@ -119,9 +121,9 @@ export default function ReportsScreen() {
         {/* Donut Chart Card */}
         <div className="mt-6 card p-6">
           <div className="text-center mb-4">
-            <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider">Total {activeTab === 'expenses' ? 'Expenses' : 'Income'}</p>
+            <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider">{t('total')} {activeTab === 'expenses' ? t('expense') : t('income')}</p>
             <p className="text-[28px] font-extrabold text-text-primary mt-1 tracking-tight">
-              KSh {totalExpenses.toLocaleString('en-KE', { minimumFractionDigits: 2 })}
+              {formatCurrency(totalExpenses)}
             </p>
           </div>
 
@@ -129,8 +131,8 @@ export default function ReportsScreen() {
             <Doughnut data={chartData} options={chartOptions} />
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="text-center">
-                <p className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">Total {activeTab === 'expenses' ? 'Expenses' : 'Income'}</p>
-                <p className="text-base font-extrabold text-text-primary">KSh {totalExpenses.toLocaleString('en-KE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
+                <p className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">{t('total')} {activeTab === 'expenses' ? t('expense') : t('income')}</p>
+                <p className="text-base font-extrabold text-text-primary">{currency.symbol} {totalExpenses.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
               </div>
             </div>
           </div>
@@ -138,8 +140,8 @@ export default function ReportsScreen() {
 
         {/* Category Breakdown */}
         <div className="mt-6">
-          <h3 className="section-title mb-4">Expenses Report</h3>
-          {categories.length === 0 && <div className="card p-6 text-center text-sm text-text-secondary">No expense data yet. Add transactions to see your report.</div>}
+          <h3 className="section-title mb-4">{t('expense')} {t('report')}</h3>
+          {categories.length === 0 && <div className="card p-6 text-center text-sm text-text-secondary">{t('no_expense_data')}</div>}
           <div className="space-y-4">
             {categories.map((cat) => (
               <div key={cat.name} className="card p-4">
@@ -152,12 +154,12 @@ export default function ReportsScreen() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-text-primary">{cat.name}</p>
-                    <p className="text-xs text-text-secondary">of total expenses</p>
+                    <p className="text-xs text-text-secondary">{t('of_total_expenses')}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-bold text-text-primary">KSh {cat.amount.toLocaleString('en-KE', { minimumFractionDigits: 2 })}</p>
+                    <p className="text-sm font-bold text-text-primary">{currency.symbol} {cat.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                     <p className={`text-xs font-medium ${cat.change >= 0 ? 'text-accent-green' : 'text-accent-red'}`}>
-                      {cat.change >= 0 ? '+' : ''}{cat.change}% vs last month
+                      {cat.change >= 0 ? '+' : ''}{cat.change}{t('vs_last_month')}
                     </p>
                   </div>
                 </div>

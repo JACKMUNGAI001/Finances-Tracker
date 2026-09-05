@@ -1,16 +1,15 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import type { Transaction } from '@shared/types';
 import { useAuth } from '../contexts/AuthContext';
+import { useSettings } from '../contexts/SettingsContext';
 import { fetchTransactions, createTransaction, deleteTransaction } from '../services/api';
 import TransactionForm from '../components/TransactionForm';
 import TransactionList from '../components/TransactionList';
 import ExpenseChart from '../components/ExpenseChart';
 
-const formatCurrency = (value: number) =>
-  `KSh ${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
 function DashboardPage() {
   const { user, logout } = useAuth();
+  const { formatCurrency, t } = useSettings();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -68,9 +67,9 @@ function DashboardPage() {
       <div className="app-frame">
         <header className="dashboard-header">
           <div>
-            <p className="eyebrow">Dashboard</p>
-            <h1 className="page-title">Home</h1>
-            <p className="subtle-text">Your finances in one polished view.</p>
+            <p className="eyebrow">{t('dashboard')}</p>
+            <h1 className="page-title">{t('home')}</h1>
+            <p className="subtle-text">{t('overview')}</p>
           </div>
           <div className="profile-pill">
             <button className="icon-button" aria-label="Notifications">
@@ -107,26 +106,26 @@ function DashboardPage() {
               <section className="hero-card">
                 <div className="hero-top">
                   <div>
-                    <p className="hero-label">Total Balance</p>
+                    <p className="hero-label">{t('total')}</p>
                     <h2 className="balance-value">{formatCurrency(balance)}</h2>
                   </div>
                   <div className="hero-badge">
-                    <p className="badge-label">Accounts</p>
+                    <p className="badge-label">{t('accounts')}</p>
                     <p className="badge-value">{transactions.length}</p>
-                    <p className="badge-caption">Recent items</p>
+                    <p className="badge-caption">{t('recent_items')}</p>
                   </div>
                 </div>
 
                 <div className="stat-grid">
                   <div className="stat-card">
-                    <p className="stat-label">Total Income</p>
+                    <p className="stat-label">{t('total_income')}</p>
                     <p className="stat-value">{formatCurrency(totals.income)}</p>
-                    <p className="stat-caption">Bank account</p>
+                    <p className="stat-caption">{t('bank_account')}</p>
                   </div>
                   <div className="stat-card">
-                    <p className="stat-label">Total Expense</p>
+                    <p className="stat-label">{t('total_expense')}</p>
                     <p className="stat-value">{formatCurrency(totals.expense)}</p>
-                    <p className="stat-caption">Credit card</p>
+                    <p className="stat-caption">{t('credit_card')}</p>
                   </div>
                 </div>
               </section>
