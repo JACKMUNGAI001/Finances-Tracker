@@ -83,21 +83,91 @@
 
   .dark .bg-white,
   .dark .bg-gray-50,
-  .dark .bg-\[\#F7F7F8\] {
+  .dark .bg-gray-100,
+  .dark .bg-slate-50,
+  .dark .bg-slate-100,
+  .dark .bg-\[\#F7F7F8\],
+  .dark .bg-\[\#f7f7f8\] {
     background-color: var(--bg-card);
   }
 
-  .dark .bg-gray-100,
-  .dark .bg-\[\#F1F1F3\] {
+  .dark .bg-gray-200,
+  .dark .bg-\[\#F1F1F3\],
+  .dark .bg-\[\#f3edff\],
+  .dark .bg-\[\#ebebee\] {
     background-color: var(--bg-secondary);
   }
 
+  .dark .bg-\[\#fff0ed\] {
+    background-color: #3a1c1c;
+  }
+  .dark .bg-\[\#e5f4ff\] {
+    background-color: #1a2e4a;
+  }
+
+  .dark .bg-accent-red-light {
+    background-color: #2d1a1a;
+  }
+
+  .dark .bg-red-50 {
+    background-color: #2d1a1a;
+  }
+
+  .dark .bg-emerald-50,
+  .dark .bg-green-50 {
+    background-color: #142c22;
+  }
+
+  .dark .bg-violet-50 {
+    background-color: #251a38;
+  }
+
+  .dark .bg-amber-50 {
+    background-color: #302210;
+  }
+
+  .dark .bg-blue-50 {
+    background-color: #1a243a;
+  }
+
+  .dark .bg-brand-soft {
+    background-color: #2a1a40;
+  }
+
   .dark .text-text-primary { color: var(--text-primary); }
+  .dark .text-slate-900 { color: var(--text-primary); }
+  .dark .text-slate-500 { color: var(--text-secondary); }
+  .dark .text-gray-400 { color: var(--text-secondary); }
   .dark .text-text-secondary,
   .dark .text-text-muted { color: var(--text-secondary); }
+  .dark .text-gray-500 { color: var(--text-secondary); }
+  .dark .text-gray-600 { color: var(--text-secondary); }
+  .dark .text-gray-300 { color: var(--text-muted); }
+  .dark .text-gray-200 { color: var(--text-muted); }
   .dark .border-border-light,
   .dark .border-gray-100,
-  .dark .border-gray-200 { border-color: var(--border-light); }
+  .dark .border-gray-200,
+  .dark .border-gray-300,
+  .dark .border-slate-200,
+  .dark .border-slate-300 { border-color: var(--border-light); }
+
+  .dark .hover\:bg-gray-50:hover { background-color: var(--bg-secondary); }
+  .dark .hover\:bg-gray-100:hover { background-color: var(--border-light); }
+  .dark .hover\:bg-gray-200:hover { background-color: var(--border-light); }
+
+  .dark .card {
+    box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+  }
+  .dark .card-lg {
+    box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+  }
+  .dark .shadow-card {
+    box-shadow: 0 2px 16px rgba(0,0,0,0.3);
+  }
+
+  .dark .skeleton {
+    background: linear-gradient(90deg, #2a2a3a 25%, #1a1a2a 50%, #2a2a3a 75%);
+  }
 
   .app-container {
     width: 100%;

@@ -102,7 +102,7 @@ export default function SettingsScreen() {
           <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3 px-1">{t('preferences')}</p>
           <div className="card overflow-hidden">
             {[
-              { icon: '🎨', label: t('appearance'), desc: 'Theme, font size' },
+              { icon: '🎨', label: t('appearance'), desc: t('appearance_desc') },
               { icon: '🔒', label: t('data_privacy'), desc: 'Backup, encryption' },
               { icon: '❓', label: t('help_support'), desc: 'FAQ, contact us' },
               { icon: 'ℹ️', label: t('about'), desc: 'Version 1.0.0' },
