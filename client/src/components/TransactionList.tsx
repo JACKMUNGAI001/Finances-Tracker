@@ -25,24 +25,24 @@ const TransactionList: React.FC<Props> = ({ transactions, onDelete }) => {
         </div>
       ) : (
         <ul className="space-y-4 mt-4">
-          {transactions.map(t => (
-            <li key={t.id} className={`transaction-item ${t.type === 'income' ? 'income' : 'expense'}`}>
-              <div className="avatar">{t.category.charAt(0)}</div>
+          {transactions.map(tx => (
+            <li key={tx.id} className={`transaction-item ${tx.type === 'income' ? 'income' : 'expense'}`}>
+              <div className="avatar">{tx.category.charAt(0)}</div>
               <div className="flex-1">
-                <p className="font-semibold text-slate-900 text-sm">{t.description}</p>
+                <p className="font-semibold text-slate-900 text-sm">{tx.description}</p>
                 <p className="text-xs text-slate-500 mt-1">
-                  {t.category} · {new Date(t.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                  {tx.category} · {new Date(tx.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                 </p>
               </div>
               <div className="amount-wrap">
-                <p className={`amount ${t.type}`}>
-                  {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}
+                <p className={`amount ${tx.type}`}>
+                  {tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount)}
                 </p>
-                <p className="detail-pill">{t.type === 'income' ? t('income') : t('expense')}</p>
+                <p className="detail-pill">{tx.type === 'income' ? t('income') : t('expense')}</p>
               </div>
               <button
                 className="text-sm font-semibold text-rose-500 transition hover:text-rose-600 ml-2"
-                onClick={() => t.id && onDelete(t.id)}
+                onClick={() => tx.id && onDelete(tx.id)}
               >
                 {t('delete')}
               </button>

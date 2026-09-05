@@ -49,7 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const updateProfile = async (name: string, email: string) => {
     const { error } = await supabase.auth.updateUser({
       email,
-      options: { data: { name } },
+      data: { name },
     });
     if (error) throw error;
     setUser((prev) => prev ? { ...prev, name, email } : prev);
