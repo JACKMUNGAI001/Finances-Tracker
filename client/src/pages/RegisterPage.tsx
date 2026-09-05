@@ -11,7 +11,7 @@ interface RegisterFormData {
 
 export default function RegisterPage() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { signUp } = useAuth();
   const [formData, setFormData] = useState<RegisterFormData>({
     name: '',
     email: '',
@@ -53,10 +53,14 @@ export default function RegisterPage() {
     }
 
     try {
-      login({ name: formData.name, email: formData.email });
-      navigate('/home');
-    } catch {
-      setError('Failed to create account. Please try again.');
+      const { needsEmailConfirmation } = await signUp(formData.name, formData.email, formData.password);
+      if (needsEmailConfirmation) {
+        setError('Check your email to confirm your account, then sign in.');
+      } else {
+        navigate('/home');
+      }
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Failed to create account. Please try again.');
     } finally {
       setLoading(false);
     }

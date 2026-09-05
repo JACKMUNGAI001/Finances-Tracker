@@ -17,8 +17,8 @@ export default function SettingsScreen() {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate('/login');
   };
 

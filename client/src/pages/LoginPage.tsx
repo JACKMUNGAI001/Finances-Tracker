@@ -9,7 +9,7 @@ interface LoginFormData {
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { signIn } = useAuth();
   const [formData, setFormData] = useState<LoginFormData>({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -31,7 +31,7 @@ export default function LoginPage() {
         return;
       }
 
-      login({ email: formData.email, name: formData.email.split('@')[0] });
+      await signIn(formData.email, formData.password);
       navigate('/home');
     } catch {
       setError('Failed to sign in. Please try again.');

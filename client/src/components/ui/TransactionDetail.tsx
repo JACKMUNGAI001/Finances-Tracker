@@ -3,7 +3,7 @@ import type { Transaction } from '@shared/types';
 interface TransactionDetailProps {
   transaction: Transaction;
   onClose: () => void;
-  onDelete: (id: number) => void;
+  onDelete: (id: string | number) => void;
 }
 
 const categoryMeta: Record<string, { icon: string; color: string }> = {

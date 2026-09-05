@@ -54,7 +54,7 @@ export default function TransactionsPage() {
     }
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string | number) => {
     try {
       await deleteTransaction(id);
       setTransactions(prev => prev.filter(t => t.id !== id));

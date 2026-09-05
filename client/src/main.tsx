@@ -1,7 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
-import { AuthProvider } from './contexts/AuthContext'
+import { AuthProvider, useAuth } from './contexts/AuthContext'
 import './index.css'
 import HomeScreen from './pages/HomeScreen'
 import ReportsScreen from './pages/ReportsScreen'
@@ -17,7 +17,7 @@ if (localStorage.getItem('theme') === 'dark') {
 }
 
 function ProtectedRoute({ children }: { children: React.JSX.Element }) {
-  const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+  const { isAuthenticated } = useAuth();
   return isAuthenticated ? children : <LoginPage />;
 }
 
