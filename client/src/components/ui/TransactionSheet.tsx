@@ -73,8 +73,9 @@ export default function TransactionSheet({ open, onClose, onSuccess, initialType
       const added = await createTransaction(newTransaction);
       onSuccess(added);
       onClose();
-    } catch {
-      setError('Failed to save. Please try again.');
+    } catch (err: any) {
+      console.error('Transaction save failed:', err);
+      setError(err?.message || 'Failed to save. Please try again.');
     } finally {
       setLoading(false);
     }

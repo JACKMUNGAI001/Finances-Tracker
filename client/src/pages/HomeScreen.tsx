@@ -7,7 +7,7 @@ import FabMenu from '../components/ui/FabMenu';
 import TransactionDetail from '../components/ui/TransactionDetail';
 import BottomSheet from '../components/ui/BottomSheet';
 import type { Transaction } from '@shared/types';
-import { fetchTransactions, createTransaction, deleteTransaction } from '../services/api';
+import { fetchTransactions, deleteTransaction } from '../services/api';
 
 const categoryMeta: Record<string, { icon: string; color: string }> = {
   Food: { icon: '🍔', color: '#3B82F6' },
@@ -60,13 +60,8 @@ export default function HomeScreen() {
   const balance = totals.income - totals.expense;
   const recentTransactions = useMemo(() => transactions.slice(0, 5), [transactions]);
 
-  const handleAdd = async (newTx: Transaction) => {
-    try {
-      const added = await createTransaction(newTx);
-      setTransactions(prev => [added, ...prev]);
-    } catch {
-      // silent
-    }
+  const handleAdd = (newTx: Transaction) => {
+    setTransactions(prev => [newTx, ...prev]);
   };
 
   const handleDelete = async (id: string | number) => {
