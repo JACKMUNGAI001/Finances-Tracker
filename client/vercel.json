@@ -10,17 +10,10 @@
       }
     }
   ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "headers": { "Cache-Control": "no-cache" },
-      "dest": "/index.html"
-    }
-  ],
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api/%1"
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ],
   "env": {
