@@ -1,0 +1,30 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist",
+        "buildCommand": "npm run build"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "headers": { "Cache-Control": "no-cache" },
+      "dest": "/index.html"
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/%1"
+    }
+  ],
+  "env": {
+    "VITE_SUPABASE_URL": "https://uxbhanitrrawpfqpgqsu.supabase.co",
+    "VITE_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_EcLUg-WK2aRzUu4SETs04Q_zBsIsMlj"
+  }
+}
