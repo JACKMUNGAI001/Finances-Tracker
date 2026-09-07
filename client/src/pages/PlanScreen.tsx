@@ -239,19 +239,19 @@ export default function PlanScreen() {
               return <div className="card-lg p-5" key={goal.id}>
                 <div className="flex items-start justify-between mb-4">
                   <div>
-                    <div className="flex items-center gap-1">
-                      <h4 className="text-base font-bold text-text-primary">{goal.title}</h4>
-                      <button
-                        onClick={() => openEditGoal(goal)}
-                        className="text-xs text-text-secondary hover:text-brand transition-colors"
-                        aria-label="Edit goal"
-                      >✏️</button>
-                      <button
-                        onClick={() => deleteGoal(goal.id)}
-                        className="text-xs text-text-secondary hover:text-red-500 transition-colors"
-                        aria-label="Delete goal"
-                      >🗑️</button>
-                    </div>
+                   <div className="flex items-center gap-1">
+                     <h4 className="text-base font-bold text-text-primary">{goal.title}</h4>
+                     <button
+                       onClick={() => openEditGoal(goal)}
+                       className="w-7 h-7 rounded-lg bg-gray-50 border border-border-light flex items-center justify-center text-sm text-text-secondary hover:bg-gray-100 hover:text-brand transition-colors"
+                       aria-label="Edit goal"
+                     >✏️</button>
+                     <button
+                       onClick={() => deleteGoal(goal.id)}
+                       className="w-7 h-7 rounded-lg bg-red-50 border border-red-100 flex items-center justify-center text-sm text-red-500 hover:bg-red-100 transition-colors"
+                       aria-label="Delete goal"
+                     >🗑️</button>
+                   </div>
                     <p className="text-xs text-text-secondary mt-0.5">{goal.subtitle}</p>
                   </div>
                   <div className="text-right"><p className="text-[10px] text-text-secondary font-medium">{t('of')} {formatCurrency(goal.target)}</p><p className="text-lg font-extrabold text-brand">{formatCurrency(goal.current)}</p></div>
@@ -285,21 +285,21 @@ export default function PlanScreen() {
                     <span className="text-xs font-extrabold text-text-primary">{budget.percent}%</span>
                   </ProgressRing>
                 </div>
-                <div className="flex items-center justify-center gap-1 mb-1">
+                <div className="flex items-center justify-center gap-1.5 mb-1">
                   <span className="text-sm">{budget.icon}</span>
                   <p className="text-xs font-semibold text-text-primary">{budget.name}</p>
-                </div>
-                <div className="flex items-center justify-center gap-1 mb-2">
-                  <button
-                    onClick={() => openEditBudget(budget)}
-                    className="text-xs text-text-secondary hover:text-brand transition-colors"
-                    aria-label="Edit budget"
-                  >✏️</button>
-                  <button
-                    onClick={() => deleteBudget(budget.id)}
-                    className="text-xs text-text-secondary hover:text-red-500 transition-colors"
-                    aria-label="Delete budget"
-                  >🗑️</button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => openEditBudget(budget)}
+                      className="w-6 h-6 rounded-lg bg-gray-50 border border-border-light flex items-center justify-center text-xs text-text-secondary hover:bg-gray-100 hover:text-brand transition-colors"
+                      aria-label="Edit budget"
+                    >✏️</button>
+                    <button
+                      onClick={() => deleteBudget(budget.id)}
+                      className="w-6 h-6 rounded-lg bg-red-50 border border-red-100 flex items-center justify-center text-xs text-red-500 hover:bg-red-100 transition-colors"
+                      aria-label="Delete budget"
+                    >🗑️</button>
+                  </div>
                 </div>
                 <p className="text-[10px] text-text-secondary font-medium">
                   {formatCurrency(budget.spent)} {t('of')} {formatCurrency(budget.total)}
