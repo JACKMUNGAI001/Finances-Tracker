@@ -43,14 +43,27 @@ export default function PlanScreen() {
   const storageKey = user ? `plan_${user.email}` : 'plan_guest';
   const { currency, formatCurrency, t } = useSettings();
   const [searchParams] = useSearchParams();
+  const createParam = searchParams.get('create');
   const [goals, setGoals] = useState<Goal[]>(() => loadFromStorage(`${storageKey}_goals`, []) as Goal[]);
-  const [goalOpen, setGoalOpen] = useState(() => searchParams.get('create') === 'goal');
-  const [budgetOpen, setBudgetOpen] = useState(() => searchParams.get('create') === 'budget');
+  const [goalOpen, setGoalOpen] = useState(() => createParam === 'goal');
+  const [budgetOpen, setBudgetOpen] = useState(() => createParam === 'budget');
   const [title, setTitle] = useState('');
   const [target, setTarget] = useState('');
   const [budgets, setBudgets] = useState<Budget[]>(() => loadFromStorage(`${storageKey}_budgets`, []) as Budget[]);
   const [addMoneyTarget, setAddMoneyTarget] = useState<AddMoneyTarget>(null);
-  const [addMoneyAmount, setAddMoneyAmount] = useState('');
+
+  useEffect(() => {
+    saveToStorage(`${storageKey}_goals`, goals);
+  }, [goals, storageKey]);
+
+  useEffect(() => {
+    saveToStorage(`${storageKey}_budgets`, budgets);
+  }, [budgets, storageKey]);
+
+  useEffect(() => {
+    if (createParam === 'goal') setGoalOpen(true);
+    if (createParam === 'budget') setBudgetOpen(true);
+  }, [createParam]);  const [addMoneyAmount, setAddMoneyAmount] = useState('');
   const [addMoneyError, setAddMoneyError] = useState<string | null>(null);
   const [editTarget, setEditTarget] = useState<EditTarget>(null);
   const [editName, setEditName] = useState('');
