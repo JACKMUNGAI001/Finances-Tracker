@@ -231,6 +231,7 @@ export default function TransactionsPage() {
           transaction={selectedTx}
           onClose={() => setSelectedTx(null)}
           onDelete={handleDelete}
+          onEdit={(tx) => { setEditConfirmTx(tx); setSelectedTx(null); }}
         />
       )}
 

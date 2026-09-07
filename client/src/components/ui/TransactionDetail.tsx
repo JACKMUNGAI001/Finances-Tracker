@@ -1,10 +1,13 @@
+import { useState } from 'react';
 import type { Transaction } from '@shared/types';
 import { useSettings } from '../../contexts/SettingsContext';
+import BottomSheet from './BottomSheet';
 
 interface TransactionDetailProps {
   transaction: Transaction;
   onClose: () => void;
   onDelete: (id: string | number) => void;
+  onEdit?: (transaction: Transaction) => void;
 }
 
 const categoryMeta: Record<string, { icon: string; color: string }> = {
@@ -19,10 +22,18 @@ const categoryMeta: Record<string, { icon: string; color: string }> = {
   Other: { icon: '📦', color: '#6B7280' },
 };
 
-export default function TransactionDetail({ transaction, onClose, onDelete }: TransactionDetailProps) {
+export default function TransactionDetail({ transaction, onClose, onDelete, onEdit }: TransactionDetailProps) {
   const { t, formatCurrency, language } = useSettings();
   const meta = categoryMeta[transaction.category] || categoryMeta.Other;
   const isIncome = transaction.type === 'income';
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const handleDelete = () => {
+    if (transaction.id) {
+      onDelete(transaction.id);
+      onClose();
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-[1100] flex items-end justify-center">
@@ -71,27 +82,54 @@ export default function TransactionDetail({ transaction, onClose, onDelete }: Tr
             ))}
           </div>
 
-          <div className="mt-8 flex gap-3">
-            <button
-              onClick={onClose}
-              className="flex-1 py-3.5 rounded-full border border-gray-200 text-sm font-semibold text-text-secondary hover:bg-gray-50 transition-colors"
-            >
-              {t('close')}
-            </button>
-            <button
-              onClick={() => {
-                if (transaction.id) {
-                  onDelete(transaction.id);
-                  onClose();
-                }
-              }}
-              className="flex-1 py-3.5 rounded-full bg-red-50 text-red-500 text-sm font-semibold hover:bg-red-100 transition-colors"
-            >
-              {t('delete')}
-            </button>
-          </div>
-        </div>
-      </div>
+           <div className="mt-8 flex gap-3">
+             <button
+               onClick={onClose}
+               className="flex-1 py-3.5 rounded-full border border-gray-200 text-sm font-semibold text-text-secondary hover:bg-gray-50 transition-colors"
+             >
+               {t('close')}
+             </button>
+             {onEdit && (
+               <button
+                 onClick={() => onEdit(transaction)}
+                 className="flex-1 py-3.5 rounded-full bg-brand-soft text-brand text-sm font-semibold hover:bg-brand transition-colors"
+               >
+                 {t('edit')}
+               </button>
+             )}
+             <button
+               onClick={() => setConfirmDelete(true)}
+               className="flex-1 py-3.5 rounded-full bg-red-50 text-red-500 text-sm font-semibold hover:bg-red-100 transition-colors"
+             >
+               {t('delete')}
+             </button>
+           </div>
+         </div>
+
+         <BottomSheet open={confirmDelete} onClose={() => setConfirmDelete(false)}>
+           <div className="px-5 pb-8">
+             <h2 className="text-xl font-bold text-text-primary">{t('delete_confirm')}</h2>
+             <p className="mt-1 text-sm text-text-secondary">{t('delete_warning')}</p>
+             {transaction.description && (
+               <p className="block mt-2 font-medium text-text-primary">"{transaction.description}"</p>
+             )}
+             <div className="mt-6 flex gap-3">
+               <button
+                 onClick={() => setConfirmDelete(false)}
+                 className="flex-1 py-3.5 rounded-full border border-gray-200 text-sm font-semibold text-text-secondary hover:bg-gray-50 transition-colors"
+               >
+                 {t('cancel')}
+               </button>
+               <button
+                 onClick={handleDelete}
+                 className="flex-1 py-3.5 rounded-full bg-red-50 text-red-500 text-sm font-semibold hover:bg-red-100 transition-colors"
+               >
+                 {t('delete')}
+               </button>
+             </div>
+           </div>
+         </BottomSheet>
+       </div>
     </div>
   );
 }
