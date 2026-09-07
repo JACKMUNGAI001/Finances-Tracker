@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import TransactionSheet from './TransactionSheet';
 import BottomSheet from './BottomSheet';
 import { useSettings } from '../../contexts/SettingsContext';
+import { createTransaction } from '../../services/api';
 import type { Transaction } from '@shared/types';
 
 interface FabAction {
@@ -25,6 +26,13 @@ export default function FabMenu({ onAddTransaction }: FabMenuProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
   const [transferComplete, setTransferComplete] = useState(false);
+  const [transferAmount, setTransferAmount] = useState('');
+  const [transferError, setTransferError] = useState<string | null>(null);
+
+  const accountsFrom = [{ value: 'Main', label: 'Main account' }, { value: 'Cash', label: 'Cash' }];
+  const accountsTo = [{ value: 'Cash', label: 'Cash' }, { value: 'Savings', label: 'Savings' }];
+  const [fromAccount, setFromAccount] = useState(accountsFrom[0].value);
+  const [toAccount, setToAccount] = useState(accountsTo[0].value);
 
   const actions: FabAction[] = useMemo(() => [
     {
@@ -56,6 +64,10 @@ export default function FabMenu({ onAddTransaction }: FabMenuProps) {
       bgColor: 'bg-violet-50',
       action: () => {
         setTransferComplete(false);
+        setTransferAmount('');
+        setTransferError(null);
+        setFromAccount(accountsFrom[0].value);
+        setToAccount(accountsTo[0].value);
         setTransferOpen(true);
         setMenuOpen(false);
       },
@@ -81,6 +93,30 @@ export default function FabMenu({ onAddTransaction }: FabMenuProps) {
       },
     },
   ], [t, navigate]);
+
+  const handleTransfer = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setTransferError(null);
+    const parsedAmount = parseFloat(transferAmount);
+    if (!transferAmount || isNaN(parsedAmount) || parsedAmount <= 0) {
+      setTransferError(t('enter_valid_amount'));
+      return;
+    }
+    try {
+      const added = await createTransaction({
+        description: `Transfer to ${toAccount}`,
+        amount: parsedAmount,
+        type: 'expense',
+        category: 'Other',
+        date: new Date().toISOString(),
+      });
+      onAddTransaction(added);
+      setTransferComplete(true);
+    } catch (err) {
+      console.error('Transfer failed:', err);
+      setTransferError(t('failed_to_save'));
+    }
+  };
 
   return (
     <>
@@ -135,15 +171,25 @@ export default function FabMenu({ onAddTransaction }: FabMenuProps) {
       </BottomSheet>
 
       <BottomSheet open={transferOpen} onClose={() => setTransferOpen(false)}>
-        <form className="px-5 pb-8" onSubmit={(event) => { event.preventDefault(); setTransferComplete(true); }}>
+        <form className="px-5 pb-8" onSubmit={handleTransfer}>
           <h2 className="text-xl font-bold text-text-primary">{t('transfer_money')}</h2>
           <p className="mt-1 text-sm text-text-secondary">{t('move_money')}</p>
+          {transferError && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-2xl text-red-600 text-sm font-medium">{transferError}</div>
+          )}
           {transferComplete ? (
             <div className="mt-6 rounded-2xl bg-emerald-50 p-4 text-sm font-semibold text-emerald-700">{t('transfer_recorded')}</div>
           ) : <>
-            <label className="mt-6 block text-sm font-semibold text-text-primary">{t('from')}</label><select className="input-field mt-2"><option>Main account</option><option>Cash</option></select>
-            <label className="mt-4 block text-sm font-semibold text-text-primary">{t('to')}</label><select className="input-field mt-2"><option>Cash</option><option>Savings</option></select>
-            <label className="mt-4 block text-sm font-semibold text-text-primary">{t('amount')} ({currency.symbol})</label><input className="input-field mt-2" type="number" min="1" inputMode="decimal" required placeholder="0" />
+            <label className="mt-6 block text-sm font-semibold text-text-primary">{t('from')}</label>
+            <select className="input-field mt-2" value={fromAccount} onChange={(e) => setFromAccount(e.target.value)}>
+              {accountsFrom.map((account) => <option key={account.value} value={account.value}>{account.label}</option>)}
+            </select>
+            <label className="mt-4 block text-sm font-semibold text-text-primary">{t('to')}</label>
+            <select className="input-field mt-2" value={toAccount} onChange={(e) => setToAccount(e.target.value)}>
+              {accountsTo.map((account) => <option key={account.value} value={account.value}>{account.label}</option>)}
+            </select>
+            <label className="mt-4 block text-sm font-semibold text-text-primary">{t('amount')} ({currency.symbol})</label>
+            <input className="input-field mt-2" type="number" min="1" inputMode="decimal" value={transferAmount} onChange={(e) => setTransferAmount(e.target.value)} placeholder="0" required />
           </>}
           <button className="btn-primary mt-6" type="submit" onClick={transferComplete ? () => setTransferOpen(false) : undefined}>{transferComplete ? t('done') : t('transfer')}</button>
         </form>
