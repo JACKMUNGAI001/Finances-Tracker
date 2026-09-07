@@ -6,6 +6,8 @@ import FabMenu from '../components/ui/FabMenu';
 import BottomSheet from '../components/ui/BottomSheet';
 import { useSettings } from '../contexts/SettingsContext';
 import { useAuth } from '../contexts/AuthContext';
+import { createTransaction } from '../services/api';
+import type { TransactionType } from '@shared/types';
 
 type Goal = {
   id: string;
@@ -18,6 +20,7 @@ type Goal = {
 type Budget = { id: string; name: string; spent: number; total: number; percent: number; color: string; icon: string };
 
 type AddMoneyTarget = { type: 'goal'; id: string } | { type: 'budget'; id: string } | null;
+type EditTarget = { type: 'goal'; id: string } | { type: 'budget'; id: string } | null;
 
 function loadFromStorage(key: string, fallback: unknown): unknown {
   try {
@@ -48,6 +51,10 @@ export default function PlanScreen() {
   const [budgets, setBudgets] = useState<Budget[]>(() => loadFromStorage(`${storageKey}_budgets`, []) as Budget[]);
   const [addMoneyTarget, setAddMoneyTarget] = useState<AddMoneyTarget>(null);
   const [addMoneyAmount, setAddMoneyAmount] = useState('');
+  const [addMoneyError, setAddMoneyError] = useState<string | null>(null);
+  const [editTarget, setEditTarget] = useState<EditTarget>(null);
+  const [editName, setEditName] = useState('');
+  const [editAmount, setEditAmount] = useState('');
 
   useEffect(() => {
     saveToStorage(`${storageKey}_goals`, goals);
@@ -93,30 +100,88 @@ export default function PlanScreen() {
     setBudgetOpen(false);
   };
 
-  const handleAddMoney = (event: React.FormEvent) => {
+  const handleAddMoney = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (!addMoneyTarget) return;
+    setAddMoneyError(null);
     const amount = Number(addMoneyAmount);
     if (!Number.isFinite(amount) || amount <= 0) return;
 
-    if (addMoneyTarget?.type === 'goal') {
+    try {
+      const txType: TransactionType = addMoneyTarget.type === 'goal' ? 'income' : 'expense';
+      await createTransaction({
+        description: addMoneyTarget.type === 'goal'
+          ? `Added to savings: ${goals.find(g => g.id === addMoneyTarget.id)?.title || 'Goal'}`
+          : `Budget spending: ${budgets.find(b => b.id === addMoneyTarget.id)?.name || 'Budget'}`,
+        amount,
+        type: txType,
+        category: 'Other',
+        date: new Date().toISOString(),
+      });
+
+      if (addMoneyTarget.type === 'goal') {
+        setGoals((current) =>
+          current.map((g) => (g.id === addMoneyTarget.id ? { ...g, current: g.current + amount } : g))
+        );
+      } else if (addMoneyTarget.type === 'budget') {
+        setBudgets((current) =>
+          current.map((b) => {
+            if (b.id === addMoneyTarget.id) {
+              const newSpent = b.spent + amount;
+              const newPercent = Math.min(100, Math.round((newSpent / b.total) * 100));
+              return { ...b, spent: newSpent, percent: newPercent };
+            }
+            return b;
+          })
+        );
+      }
+
+      setAddMoneyAmount('');
+      setAddMoneyTarget(null);
+    } catch (err) {
+      console.error('Add money failed:', err);
+      setAddMoneyError(t('failed_to_save'));
+    }
+  };
+
+  const openEditGoal = (goal: Goal) => {
+    setEditTarget({ type: 'goal', id: goal.id });
+    setEditName(goal.title);
+    setEditAmount(String(goal.target));
+  };
+
+  const openEditBudget = (budget: Budget) => {
+    setEditTarget({ type: 'budget', id: budget.id });
+    setEditName(budget.name);
+    setEditAmount(String(budget.total));
+  };
+
+  const handleEdit = (event: React.FormEvent) => {
+    event.preventDefault();
+    const amount = Number(editAmount);
+    if (!editName.trim() || !Number.isFinite(amount) || amount <= 0) return;
+
+    if (editTarget?.type === 'goal') {
       setGoals((current) =>
-        current.map((g) => (g.id === addMoneyTarget.id ? { ...g, current: g.current + amount } : g))
+        current.map((g) => (g.id === editTarget.id ? { ...g, title: editName.trim() } : g))
       );
-    } else if (addMoneyTarget?.type === 'budget') {
+    } else if (editTarget?.type === 'budget') {
       setBudgets((current) =>
-        current.map((b) => {
-          if (b.id === addMoneyTarget.id) {
-            const newSpent = b.spent + amount;
-            const newPercent = Math.min(100, Math.round((newSpent / b.total) * 100));
-            return { ...b, spent: newSpent, percent: newPercent };
-          }
-          return b;
-        })
+        current.map((b) => (b.id === editTarget.id ? { ...b, name: editName.trim() } : b))
       );
     }
 
-    setAddMoneyAmount('');
-    setAddMoneyTarget(null);
+    setEditTarget(null);
+    setEditName('');
+    setEditAmount('');
+  };
+
+  const deleteGoal = (id: string) => {
+    setGoals((current) => current.filter((g) => g.id !== id));
+  };
+
+  const deleteBudget = (id: string) => {
+    setBudgets((current) => current.filter((b) => b.id !== id));
   };
 
   return (
@@ -130,7 +195,7 @@ export default function PlanScreen() {
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setGoalOpen(true)}
+              onClick={() => { setTitle(''); setTarget(''); setGoalOpen(true); }}
               className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-card border border-border-light text-text-secondary hover:text-brand transition-colors"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -160,17 +225,32 @@ export default function PlanScreen() {
               const remaining = Math.max(0, goal.target - goal.current);
               return <div className="card-lg p-5" key={goal.id}>
                 <div className="flex items-start justify-between mb-4">
-                  <div><h4 className="text-base font-bold text-text-primary">{goal.title}</h4><p className="text-xs text-text-secondary mt-0.5">{goal.subtitle}</p></div>
+                  <div>
+                    <div className="flex items-center gap-1">
+                      <h4 className="text-base font-bold text-text-primary">{goal.title}</h4>
+                      <button
+                        onClick={() => openEditGoal(goal)}
+                        className="text-xs text-text-secondary hover:text-brand transition-colors"
+                        aria-label="Edit goal"
+                      >✏️</button>
+                      <button
+                        onClick={() => deleteGoal(goal.id)}
+                        className="text-xs text-text-secondary hover:text-red-500 transition-colors"
+                        aria-label="Delete goal"
+                      >🗑️</button>
+                    </div>
+                    <p className="text-xs text-text-secondary mt-0.5">{goal.subtitle}</p>
+                  </div>
                   <div className="text-right"><p className="text-[10px] text-text-secondary font-medium">{t('of')} {formatCurrency(goal.target)}</p><p className="text-lg font-extrabold text-brand">{formatCurrency(goal.current)}</p></div>
                 </div>
                 <div className="progress-bar h-2.5 mb-3"><div className="progress-fill bg-gradient-to-r from-brand to-brand-light" style={{ width: `${percent}%` }} /></div>
-                 <div className="flex items-center justify-between">
-                   <p className="text-xs font-medium text-text-secondary">{formatCurrency(remaining)} {t('remaining')}</p>
-                   <div className="flex items-center gap-2">
-                     <span className="text-xs font-bold text-brand">{percent}%</span>
-                     <button onClick={() => setAddMoneyTarget({ type: 'goal', id: goal.id })} className="text-xs font-semibold text-brand hover:text-brand-dark">{t('add_money')}</button>
-                   </div>
-                 </div>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium text-text-secondary">{formatCurrency(remaining)} {t('remaining')}</p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-brand">{percent}%</span>
+                    <button onClick={() => setAddMoneyTarget({ type: 'goal', id: goal.id })} className="text-xs font-semibold text-brand hover:text-brand-dark">{t('add_money')}</button>
+                  </div>
+                </div>
               </div>;
             })}
             {goals.length === 0 && <div className="card-lg p-6 text-center text-sm text-text-secondary">{t('no_goals')}</div>}
@@ -186,20 +266,32 @@ export default function PlanScreen() {
 
           <div className="grid grid-cols-2 gap-3">
             {budgets.map((budget) => (
-              <div key={budget.id} className="card p-4 flex flex-col items-center text-center">
+              <div key={budget.id} className="card p-4">
                 <div className="relative mb-3">
                   <ProgressRing progress={budget.percent} size={48} strokeWidth={6} color={budget.color}>
                     <span className="text-xs font-extrabold text-text-primary">{budget.percent}%</span>
                   </ProgressRing>
                 </div>
-                <div className="flex items-center gap-1.5 mb-1">
+                <div className="flex items-center justify-center gap-1 mb-1">
                   <span className="text-sm">{budget.icon}</span>
                   <p className="text-xs font-semibold text-text-primary">{budget.name}</p>
                 </div>
-                 <p className="text-[10px] text-text-secondary font-medium">
-                   {formatCurrency(budget.spent)} {t('of')} {formatCurrency(budget.total)}
-                 </p>
-                 <button onClick={() => setAddMoneyTarget({ type: 'budget', id: budget.id })} className="mt-2 text-xs font-semibold text-brand hover:text-brand-dark">{t('add_spending')}</button>
+                <div className="flex items-center justify-center gap-1 mb-2">
+                  <button
+                    onClick={() => openEditBudget(budget)}
+                    className="text-xs text-text-secondary hover:text-brand transition-colors"
+                    aria-label="Edit budget"
+                  >✏️</button>
+                  <button
+                    onClick={() => deleteBudget(budget.id)}
+                    className="text-xs text-text-secondary hover:text-red-500 transition-colors"
+                    aria-label="Delete budget"
+                  >🗑️</button>
+                </div>
+                <p className="text-[10px] text-text-secondary font-medium">
+                  {formatCurrency(budget.spent)} {t('of')} {formatCurrency(budget.total)}
+                </p>
+                <button onClick={() => setAddMoneyTarget({ type: 'budget', id: budget.id })} className="mt-2 text-xs font-semibold text-brand hover:text-brand-dark">{t('add_spending')}</button>
               </div>
             ))}
           </div>
@@ -245,6 +337,9 @@ export default function PlanScreen() {
               ? t('add_money_to_goal')
               : t('add_spending_to_budget')}
           </p>
+          {addMoneyError && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-2xl text-red-600 text-sm font-medium">{addMoneyError}</div>
+          )}
           <label className="mt-6 block text-sm font-semibold text-text-primary">{t('amount')} ({currency.symbol})</label>
           <input
             value={addMoneyAmount}
@@ -256,6 +351,17 @@ export default function PlanScreen() {
             placeholder="0"
             required
           />
+          <button className="btn-primary mt-6" type="submit">{t('save')}</button>
+        </form>
+      </BottomSheet>
+
+      <BottomSheet open={editTarget !== null} onClose={() => setEditTarget(null)}>
+        <form onSubmit={handleEdit} className="px-5 pb-8">
+          <h2 className="text-xl font-bold text-text-primary">{t('edit')}</h2>
+          <label className="mt-6 block text-sm font-semibold text-text-primary">{t('name')}</label>
+          <input value={editName} onChange={(e) => setEditName(e.target.value)} className="input-field mt-2" placeholder={t('edit_name_placeholder')} required />
+          <label className="mt-5 block text-sm font-semibold text-text-primary">{t('amount')} ({currency.symbol})</label>
+          <input value={editAmount} onChange={(e) => setEditAmount(e.target.value)} className="input-field mt-2" type="number" min="1" inputMode="decimal" placeholder="0" required />
           <button className="btn-primary mt-6" type="submit">{t('save')}</button>
         </form>
       </BottomSheet>
