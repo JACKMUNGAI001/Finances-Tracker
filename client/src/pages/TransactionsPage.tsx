@@ -28,6 +28,7 @@ export default function TransactionsPage() {
   const [filter, setFilter] = useState<FilterType>('all');
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
   const [editTx, setEditTx] = useState<Transaction | null>(null);
+  const [editConfirmTx, setEditConfirmTx] = useState<Transaction | null>(null);
   const [deleteTx, setDeleteTx] = useState<Transaction | null>(null);
   const { formatCurrency, t } = useSettings();
 
@@ -187,7 +188,7 @@ export default function TransactionsPage() {
                         </button>
                         <div className="flex flex-col gap-1 flex-shrink-0">
                           <button
-                            onClick={() => tx.id && setEditTx(tx)}
+                            onClick={() => tx.id && setEditConfirmTx(tx)}
                             className="w-7 h-7 flex items-center justify-center rounded-full bg-gray-50 text-text-secondary hover:bg-brand-soft hover:text-brand transition-colors"
                             aria-label="Edit"
                           >
@@ -240,6 +241,33 @@ export default function TransactionsPage() {
           onSuccess={handleUpdate}
           transaction={editTx}
         />
+      </BottomSheet>
+
+      <BottomSheet open={!!editConfirmTx} onClose={() => setEditConfirmTx(null)}>
+        <div className="px-5 pb-8">
+          <h2 className="text-xl font-bold text-text-primary">{t('edit')}</h2>
+          <p className="mt-1 text-sm text-text-secondary">{t('edit_transaction_confirm')}</p>
+          {editConfirmTx && editConfirmTx.description && (
+            <p className="block mt-2 font-medium text-text-primary">"{editConfirmTx.description}"</p>
+          )}
+          <div className="mt-6 flex gap-3">
+            <button
+              onClick={() => setEditConfirmTx(null)}
+              className="flex-1 py-3.5 rounded-full border border-gray-200 text-sm font-semibold text-text-secondary hover:bg-gray-50 transition-colors"
+            >
+              {t('cancel')}
+            </button>
+            <button
+              onClick={() => {
+                if (editConfirmTx) setEditTx(editConfirmTx);
+                setEditConfirmTx(null);
+              }}
+              className="flex-1 py-3.5 rounded-full bg-brand-soft text-brand text-sm font-semibold hover:bg-brand transition-colors"
+            >
+              {t('continue')}
+            </button>
+          </div>
+        </div>
       </BottomSheet>
 
       <BottomSheet open={!!deleteTx} onClose={() => setDeleteTx(null)}>
