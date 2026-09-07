@@ -68,6 +68,7 @@ export default function PlanScreen() {
   const [editTarget, setEditTarget] = useState<EditTarget>(null);
   const [editName, setEditName] = useState('');
   const [editAmount, setEditAmount] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState<EditTarget>(null);
 
   useEffect(() => {
     saveToStorage(`${storageKey}_goals`, goals);
@@ -247,7 +248,7 @@ export default function PlanScreen() {
                        aria-label="Edit goal"
                      >✏️</button>
                      <button
-                       onClick={() => deleteGoal(goal.id)}
+                       onClick={() => setConfirmDelete({ type: 'goal', id: goal.id })}
                        className="w-7 h-7 rounded-lg bg-red-50 border border-red-100 flex items-center justify-center text-sm text-red-500 hover:bg-red-100 transition-colors"
                        aria-label="Delete goal"
                      >🗑️</button>
@@ -295,7 +296,7 @@ export default function PlanScreen() {
                       aria-label="Edit budget"
                     >✏️</button>
                     <button
-                      onClick={() => deleteBudget(budget.id)}
+                      onClick={() => setConfirmDelete({ type: 'budget', id: budget.id })}
                       className="w-6 h-6 rounded-lg bg-red-50 border border-red-100 flex items-center justify-center text-xs text-red-500 hover:bg-red-100 transition-colors"
                       aria-label="Delete budget"
                     >🗑️</button>
@@ -377,6 +378,31 @@ export default function PlanScreen() {
           <input value={editAmount} onChange={(e) => setEditAmount(e.target.value)} className="input-field mt-2" type="number" min="1" inputMode="decimal" placeholder="0" required />
           <button className="btn-primary mt-6" type="submit">{t('save')}</button>
         </form>
+       </BottomSheet>
+
+      <BottomSheet open={confirmDelete !== null} onClose={() => setConfirmDelete(null)}>
+        <div className="px-5 pb-8">
+          <h2 className="text-xl font-bold text-text-primary">{t('delete_confirm')}</h2>
+          <p className="mt-1 text-sm text-text-secondary">{t('delete_warning')}</p>
+          <div className="mt-6 flex gap-3">
+            <button
+              onClick={() => setConfirmDelete(null)}
+              className="flex-1 py-3.5 rounded-full border border-gray-200 text-sm font-semibold text-text-secondary hover:bg-gray-50 transition-colors"
+            >
+              {t('cancel')}
+            </button>
+            <button
+              onClick={() => {
+                if (confirmDelete?.type === 'goal') deleteGoal(confirmDelete.id);
+                if (confirmDelete?.type === 'budget') deleteBudget(confirmDelete.id);
+                setConfirmDelete(null);
+              }}
+              className="flex-1 py-3.5 rounded-full bg-red-50 text-red-500 text-sm font-semibold hover:bg-red-100 transition-colors"
+            >
+              {t('delete')}
+            </button>
+          </div>
+        </div>
       </BottomSheet>
     </div>
   );
