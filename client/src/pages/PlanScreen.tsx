@@ -17,6 +17,8 @@ type Goal = {
 
 type Budget = { id: string; name: string; spent: number; total: number; percent: number; color: string; icon: string };
 
+type AddMoneyTarget = { type: 'goal'; id: string } | { type: 'budget'; id: string } | null;
+
 function loadFromStorage(key: string, fallback: unknown): unknown {
   try {
     return JSON.parse(localStorage.getItem(key) || 'null') ?? fallback;
@@ -44,6 +46,8 @@ export default function PlanScreen() {
   const [title, setTitle] = useState('');
   const [target, setTarget] = useState('');
   const [budgets, setBudgets] = useState<Budget[]>(() => loadFromStorage(`${storageKey}_budgets`, []) as Budget[]);
+  const [addMoneyTarget, setAddMoneyTarget] = useState<AddMoneyTarget>(null);
+  const [addMoneyAmount, setAddMoneyAmount] = useState('');
 
   useEffect(() => {
     saveToStorage(`${storageKey}_goals`, goals);
@@ -87,6 +91,32 @@ export default function PlanScreen() {
     setTitle('');
     setTarget('');
     setBudgetOpen(false);
+  };
+
+  const handleAddMoney = (event: React.FormEvent) => {
+    event.preventDefault();
+    const amount = Number(addMoneyAmount);
+    if (!Number.isFinite(amount) || amount <= 0) return;
+
+    if (addMoneyTarget?.type === 'goal') {
+      setGoals((current) =>
+        current.map((g) => (g.id === addMoneyTarget.id ? { ...g, current: g.current + amount } : g))
+      );
+    } else if (addMoneyTarget?.type === 'budget') {
+      setBudgets((current) =>
+        current.map((b) => {
+          if (b.id === addMoneyTarget.id) {
+            const newSpent = b.spent + amount;
+            const newPercent = Math.min(100, Math.round((newSpent / b.total) * 100));
+            return { ...b, spent: newSpent, percent: newPercent };
+          }
+          return b;
+        })
+      );
+    }
+
+    setAddMoneyAmount('');
+    setAddMoneyTarget(null);
   };
 
   return (
@@ -134,7 +164,13 @@ export default function PlanScreen() {
                   <div className="text-right"><p className="text-[10px] text-text-secondary font-medium">{t('of')} {formatCurrency(goal.target)}</p><p className="text-lg font-extrabold text-brand">{formatCurrency(goal.current)}</p></div>
                 </div>
                 <div className="progress-bar h-2.5 mb-3"><div className="progress-fill bg-gradient-to-r from-brand to-brand-light" style={{ width: `${percent}%` }} /></div>
-                <div className="flex items-center justify-between"><p className="text-xs font-medium text-text-secondary">{formatCurrency(remaining)} {t('remaining')}</p><span className="text-xs font-bold text-brand">{percent}%</span></div>
+                 <div className="flex items-center justify-between">
+                   <p className="text-xs font-medium text-text-secondary">{formatCurrency(remaining)} {t('remaining')}</p>
+                   <div className="flex items-center gap-2">
+                     <span className="text-xs font-bold text-brand">{percent}%</span>
+                     <button onClick={() => setAddMoneyTarget({ type: 'goal', id: goal.id })} className="text-xs font-semibold text-brand hover:text-brand-dark">{t('add_money')}</button>
+                   </div>
+                 </div>
               </div>;
             })}
             {goals.length === 0 && <div className="card-lg p-6 text-center text-sm text-text-secondary">{t('no_goals')}</div>}
@@ -160,9 +196,10 @@ export default function PlanScreen() {
                   <span className="text-sm">{budget.icon}</span>
                   <p className="text-xs font-semibold text-text-primary">{budget.name}</p>
                 </div>
-                <p className="text-[10px] text-text-secondary font-medium">
-                  {formatCurrency(budget.spent)} {t('of')} {formatCurrency(budget.total)}
-                </p>
+                 <p className="text-[10px] text-text-secondary font-medium">
+                   {formatCurrency(budget.spent)} {t('of')} {formatCurrency(budget.total)}
+                 </p>
+                 <button onClick={() => setAddMoneyTarget({ type: 'budget', id: budget.id })} className="mt-2 text-xs font-semibold text-brand hover:text-brand-dark">{t('add_spending')}</button>
               </div>
             ))}
           </div>
@@ -186,17 +223,42 @@ export default function PlanScreen() {
           </form>
         </BottomSheet>
 
-        <BottomSheet open={budgetOpen} onClose={() => setBudgetOpen(false)}>
-          <form onSubmit={addBudget} className="px-5 pb-8">
-            <h2 className="text-xl font-bold text-text-primary">{t('create_budget')}</h2>
-            <p className="mt-1 text-sm text-text-secondary">{t('set_spending_limit')}</p>
-            <label className="mt-6 block text-sm font-semibold text-text-primary">{t('budget_name')}</label>
-            <input value={title} onChange={(event) => setTitle(event.target.value)} className="input-field mt-2" placeholder={t('budget_name_placeholder')} required />
-            <label className="mt-5 block text-sm font-semibold text-text-primary">{t('budget_limit')} ({currency.symbol})</label>
-            <input value={target} onChange={(event) => setTarget(event.target.value)} className="input-field mt-2" type="number" min="1" inputMode="decimal" placeholder="0" required />
-            <button className="btn-primary mt-6" type="submit">{t('create_budget_btn')}</button>
-          </form>
-        </BottomSheet>
+      <BottomSheet open={budgetOpen} onClose={() => setBudgetOpen(false)}>
+        <form onSubmit={addBudget} className="px-5 pb-8">
+          <h2 className="text-xl font-bold text-text-primary">{t('create_budget')}</h2>
+          <p className="mt-1 text-sm text-text-secondary">{t('set_spending_limit')}</p>
+          <label className="mt-6 block text-sm font-semibold text-text-primary">{t('budget_name')}</label>
+          <input value={title} onChange={(event) => setTitle(event.target.value)} className="input-field mt-2" placeholder={t('budget_name_placeholder')} required />
+          <label className="mt-5 block text-sm font-semibold text-text-primary">{t('budget_limit')} ({currency.symbol})</label>
+          <input value={target} onChange={(event) => setTarget(event.target.value)} className="input-field mt-2" type="number" min="1" inputMode="decimal" placeholder="0" required />
+          <button className="btn-primary mt-6" type="submit">{t('create_budget_btn')}</button>
+        </form>
+      </BottomSheet>
+
+      <BottomSheet open={addMoneyTarget !== null} onClose={() => setAddMoneyTarget(null)}>
+        <form onSubmit={handleAddMoney} className="px-5 pb-8">
+          <h2 className="text-xl font-bold text-text-primary">
+            {addMoneyTarget?.type === 'goal' ? t('add_money') : t('add_spending')}
+          </h2>
+          <p className="mt-1 text-sm text-text-secondary">
+            {addMoneyTarget?.type === 'goal'
+              ? t('add_money_to_goal')
+              : t('add_spending_to_budget')}
+          </p>
+          <label className="mt-6 block text-sm font-semibold text-text-primary">{t('amount')} ({currency.symbol})</label>
+          <input
+            value={addMoneyAmount}
+            onChange={(e) => setAddMoneyAmount(e.target.value)}
+            className="input-field mt-2"
+            type="number"
+            min="1"
+            inputMode="decimal"
+            placeholder="0"
+            required
+          />
+          <button className="btn-primary mt-6" type="submit">{t('save')}</button>
+        </form>
+      </BottomSheet>
     </div>
   );
 }
