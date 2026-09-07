@@ -18,6 +18,12 @@ if (localStorage.getItem('theme') === 'dark') {
   document.documentElement.classList.add('dark');
 }
 
+const buildTimestamp = (import.meta as any).env?.BUILD_TIMESTAMP;
+if (buildTimestamp && localStorage.getItem('app_build_timestamp') !== buildTimestamp) {
+  localStorage.setItem('app_build_timestamp', buildTimestamp);
+  window.location.reload();
+}
+
 function ProtectedRoute({ children }: { children: React.JSX.Element }) {
   const { isAuthenticated } = useAuth();
   return isAuthenticated ? children : <LoginPage />;
