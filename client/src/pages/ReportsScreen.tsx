@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Doughnut } from 'react-chartjs-2';
 import {
@@ -9,17 +9,100 @@ import {
 import BottomNav from '../components/BottomNav';
 import FabMenu from '../components/ui/FabMenu';
 import { useSettings } from '../contexts/SettingsContext';
+import { fetchTransactions } from '../services/api';
+import type { Transaction } from '@shared/types';
 
 ChartJS.register(ArcElement, Tooltip);
 
-const categories: { name: string; amount: number; percent: number; color: string; change: number }[] = [];
+const categoryColors: Record<string, string> = {
+  Food: '#38ACF5',
+  Rent: '#8B5CF6',
+  Salary: '#10B981',
+  Entertainment: '#EC4899',
+  Transport: '#06B6D4',
+  Utilities: '#F59E0B',
+  Shopping: '#F97316',
+  Health: '#10B981',
+  Other: '#6B7280',
+};
 
-const totalExpenses = categories.reduce((sum, c) => sum + c.amount, 0);
+const categoryLabels: Record<string, string> = {
+  Food: 'Food',
+  Rent: 'Housing',
+  Salary: 'Salary',
+  Entertainment: 'Fun',
+  Transport: 'Transport',
+  Utilities: 'Bills',
+  Shopping: 'Shopping',
+  Health: 'Health',
+  Other: 'Other',
+};
 
 export default function ReportsScreen() {
   const navigate = useNavigate();
   const { currency, formatCurrency, t } = useSettings();
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [activeTab, setActiveTab] = useState<'expenses' | 'income'>('expenses');
+  const [loading, setLoading] = useState(true);
+
+  const loadTransactions = useCallback(async () => {
+    try {
+      const data = await fetchTransactions();
+      setTransactions(data);
+    } catch (err) {
+      console.error('Failed to load transactions for report:', err);
+      setTransactions([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadTransactions();
+  }, [loadTransactions]);
+
+  const expenseCategories = useMemo(() => {
+    const expenses = transactions.filter(tx => tx.type === 'expense');
+    const totalExpenses = expenses.reduce((sum, tx) => sum + tx.amount, 0);
+
+    const byCategory = expenses.reduce((acc, tx) => {
+      acc[tx.category] = (acc[tx.category] || 0) + tx.amount;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const categories = Object.entries(byCategory).map(([name, amount]) => ({
+      name: categoryLabels[name] || name,
+      amount,
+      percent: totalExpenses > 0 ? Math.round((amount / totalExpenses) * 100) : 0,
+      color: categoryColors[name] || '#6B7280',
+      change: 0,
+    })).sort((a, b) => b.amount - a.amount);
+
+    return { categories, total: totalExpenses };
+  }, [transactions]);
+
+  const incomeCategories = useMemo(() => {
+    const incomes = transactions.filter(tx => tx.type === 'income');
+    const totalIncome = incomes.reduce((sum, tx) => sum + tx.amount, 0);
+
+    const byCategory = incomes.reduce((acc, tx) => {
+      acc[tx.category] = (acc[tx.category] || 0) + tx.amount;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const categories = Object.entries(byCategory).map(([name, amount]) => ({
+      name: categoryLabels[name] || name,
+      amount,
+      percent: totalIncome > 0 ? Math.round((amount / totalIncome) * 100) : 0,
+      color: categoryColors[name] || '#6B7280',
+      change: 0,
+    })).sort((a, b) => b.amount - a.amount);
+
+    return { categories, total: totalIncome };
+  }, [transactions]);
+
+  const activeData = activeTab === 'expenses' ? expenseCategories : incomeCategories;
+  const { categories, total } = activeData;
 
   const chartData = useMemo(() => ({
     labels: categories.map(c => c.name),
@@ -32,7 +115,7 @@ export default function ReportsScreen() {
         borderRadius: 4,
       },
     ],
-  }), []);
+  }), [categories]);
 
   const chartOptions = useMemo(() => ({
     responsive: true,
@@ -57,6 +140,10 @@ export default function ReportsScreen() {
       },
     },
   }), [currency.symbol]);
+
+  const handleAddTransaction = (tx: Transaction) => {
+    setTransactions(prev => [tx, ...prev]);
+  };
 
   return (
     <div className="app-shell">
@@ -123,7 +210,7 @@ export default function ReportsScreen() {
           <div className="text-center mb-4">
             <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider">{t('total')} {activeTab === 'expenses' ? t('expense') : t('income')}</p>
             <p className="text-[28px] font-extrabold text-text-primary mt-1 tracking-tight">
-              {formatCurrency(totalExpenses)}
+              {loading ? '...' : formatCurrency(total)}
             </p>
           </div>
 
@@ -132,7 +219,7 @@ export default function ReportsScreen() {
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="text-center">
                 <p className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">{t('total')} {activeTab === 'expenses' ? t('expense') : t('income')}</p>
-                <p className="text-base font-extrabold text-text-primary">{currency.symbol} {totalExpenses.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
+                <p className="text-base font-extrabold text-text-primary">{currency.symbol} {loading ? '...' : total.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
               </div>
             </div>
           </div>
@@ -140,7 +227,7 @@ export default function ReportsScreen() {
 
         {/* Category Breakdown */}
         <div className="mt-6">
-          <h3 className="section-title mb-4">{t('expense')} {t('report')}</h3>
+          <h3 className="section-title mb-4">{activeTab === 'expenses' ? t('expense') : t('income')} {t('report')}</h3>
           {categories.length === 0 && <div className="card p-6 text-center text-sm text-text-secondary">{t('no_expense_data')}</div>}
           <div className="space-y-4">
             {categories.map((cat) => (
@@ -180,7 +267,7 @@ export default function ReportsScreen() {
 
       <BottomNav />
 
-      <FabMenu onAddTransaction={() => {}} />
+      <FabMenu onAddTransaction={handleAddTransaction} />
     </div>
   );
 }
