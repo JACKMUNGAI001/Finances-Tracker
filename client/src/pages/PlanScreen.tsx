@@ -1,35 +1,70 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import BottomNav from '../components/BottomNav';
 import ProgressRing from '../components/ProgressRing';
 import FabMenu from '../components/ui/FabMenu';
 import BottomSheet from '../components/ui/BottomSheet';
 import { useSettings } from '../contexts/SettingsContext';
+import { useAuth } from '../contexts/AuthContext';
 
 type Goal = {
+  id: string;
   title: string;
   subtitle: string;
   target: number;
   current: number;
 };
 
-type Budget = { name: string; spent: number; total: number; percent: number; color: string; icon: string };
+type Budget = { id: string; name: string; spent: number; total: number; percent: number; color: string; icon: string };
+
+function loadFromStorage(key: string, fallback: unknown): unknown {
+  try {
+    return JSON.parse(localStorage.getItem(key) || 'null') ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function saveToStorage(key: string, value: unknown): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // ignore
+  }
+}
 
 export default function PlanScreen() {
+  const { user } = useAuth();
+  const storageKey = user ? `plan_${user.email}` : 'plan_guest';
   const { currency, formatCurrency, t } = useSettings();
   const [searchParams] = useSearchParams();
-  const [goals, setGoals] = useState<Goal[]>([]);
+  const [goals, setGoals] = useState<Goal[]>(() => loadFromStorage(`${storageKey}_goals`, []) as Goal[]);
   const [goalOpen, setGoalOpen] = useState(() => searchParams.get('create') === 'goal');
   const [budgetOpen, setBudgetOpen] = useState(() => searchParams.get('create') === 'budget');
   const [title, setTitle] = useState('');
   const [target, setTarget] = useState('');
-  const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [budgets, setBudgets] = useState<Budget[]>(() => loadFromStorage(`${storageKey}_budgets`, []) as Budget[]);
+
+  useEffect(() => {
+    saveToStorage(`${storageKey}_goals`, goals);
+  }, [goals, storageKey]);
+
+  useEffect(() => {
+    saveToStorage(`${storageKey}_budgets`, budgets);
+  }, [budgets, storageKey]);
 
   const addGoal = (event: React.FormEvent) => {
     event.preventDefault();
     const amount = Number(target);
     if (!title.trim() || !Number.isFinite(amount) || amount <= 0) return;
-    setGoals((current) => [...current, { title: title.trim(), subtitle: 'New savings goal', target: amount, current: 0 }]);
+    const newGoal: Goal = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
+      title: title.trim(),
+      subtitle: 'New savings goal',
+      target: amount,
+      current: 0,
+    };
+    setGoals((current) => [...current, newGoal]);
     setTitle('');
     setTarget('');
     setGoalOpen(false);
@@ -39,7 +74,16 @@ export default function PlanScreen() {
     event.preventDefault();
     const amount = Number(target);
     if (!title.trim() || !Number.isFinite(amount) || amount <= 0) return;
-    setBudgets((current) => [...current, { name: title.trim(), spent: 0, total: amount, percent: 0, color: '#F59E0B', icon: '💳' }]);
+    const newBudget: Budget = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
+      name: title.trim(),
+      spent: 0,
+      total: amount,
+      percent: 0,
+      color: '#F59E0B',
+      icon: '💳',
+    };
+    setBudgets((current) => [...current, newBudget]);
     setTitle('');
     setTarget('');
     setBudgetOpen(false);
@@ -84,7 +128,7 @@ export default function PlanScreen() {
             {goals.map((goal) => {
               const percent = Math.min(100, Math.round((goal.current / goal.target) * 100));
               const remaining = Math.max(0, goal.target - goal.current);
-              return <div className="card-lg p-5" key={goal.title}>
+              return <div className="card-lg p-5" key={goal.id}>
                 <div className="flex items-start justify-between mb-4">
                   <div><h4 className="text-base font-bold text-text-primary">{goal.title}</h4><p className="text-xs text-text-secondary mt-0.5">{goal.subtitle}</p></div>
                   <div className="text-right"><p className="text-[10px] text-text-secondary font-medium">{t('of')} {formatCurrency(goal.target)}</p><p className="text-lg font-extrabold text-brand">{formatCurrency(goal.current)}</p></div>
@@ -106,7 +150,7 @@ export default function PlanScreen() {
 
           <div className="grid grid-cols-2 gap-3">
             {budgets.map((budget) => (
-              <div key={budget.name} className="card p-4 flex flex-col items-center text-center">
+              <div key={budget.id} className="card p-4 flex flex-col items-center text-center">
                 <div className="relative mb-3">
                   <ProgressRing progress={budget.percent} size={48} strokeWidth={6} color={budget.color}>
                     <span className="text-xs font-extrabold text-text-primary">{budget.percent}%</span>
