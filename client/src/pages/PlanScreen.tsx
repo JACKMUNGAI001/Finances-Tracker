@@ -6,8 +6,6 @@ import FabMenu from '../components/ui/FabMenu';
 import BottomSheet from '../components/ui/BottomSheet';
 import { useSettings } from '../contexts/SettingsContext';
 import { useAuth } from '../contexts/AuthContext';
-import { createTransaction } from '../services/api';
-import type { TransactionType } from '@shared/types';
 
 type Goal = {
   id: string;
@@ -51,19 +49,7 @@ export default function PlanScreen() {
   const [target, setTarget] = useState('');
   const [budgets, setBudgets] = useState<Budget[]>(() => loadFromStorage(`${storageKey}_budgets`, []) as Budget[]);
   const [addMoneyTarget, setAddMoneyTarget] = useState<AddMoneyTarget>(null);
-
-  useEffect(() => {
-    saveToStorage(`${storageKey}_goals`, goals);
-  }, [goals, storageKey]);
-
-  useEffect(() => {
-    saveToStorage(`${storageKey}_budgets`, budgets);
-  }, [budgets, storageKey]);
-
-  useEffect(() => {
-    if (createParam === 'goal') setGoalOpen(true);
-    if (createParam === 'budget') setBudgetOpen(true);
-  }, [createParam]);  const [addMoneyAmount, setAddMoneyAmount] = useState('');
+  const [addMoneyAmount, setAddMoneyAmount] = useState('');
   const [addMoneyError, setAddMoneyError] = useState<string | null>(null);
   const [editTarget, setEditTarget] = useState<EditTarget>(null);
   const [editName, setEditName] = useState('');
@@ -77,6 +63,11 @@ export default function PlanScreen() {
   useEffect(() => {
     saveToStorage(`${storageKey}_budgets`, budgets);
   }, [budgets, storageKey]);
+
+  useEffect(() => {
+    if (createParam === 'goal') setGoalOpen(true);
+    if (createParam === 'budget') setBudgetOpen(true);
+  }, [createParam]);
 
   const addGoal = (event: React.FormEvent) => {
     event.preventDefault();
@@ -114,48 +105,32 @@ export default function PlanScreen() {
     setBudgetOpen(false);
   };
 
-  const handleAddMoney = async (event: React.FormEvent) => {
+  const handleAddMoney = (event: React.FormEvent) => {
     event.preventDefault();
     if (!addMoneyTarget) return;
     setAddMoneyError(null);
     const amount = Number(addMoneyAmount);
     if (!Number.isFinite(amount) || amount <= 0) return;
 
-    try {
-      const txType: TransactionType = addMoneyTarget.type === 'goal' ? 'income' : 'expense';
-      await createTransaction({
-        description: addMoneyTarget.type === 'goal'
-          ? `Added to savings: ${goals.find(g => g.id === addMoneyTarget.id)?.title || 'Goal'}`
-          : `Budget spending: ${budgets.find(b => b.id === addMoneyTarget.id)?.name || 'Budget'}`,
-        amount,
-        type: txType,
-        category: 'Other',
-        date: new Date().toISOString(),
-      });
-
-      if (addMoneyTarget.type === 'goal') {
-        setGoals((current) =>
-          current.map((g) => (g.id === addMoneyTarget.id ? { ...g, current: g.current + amount } : g))
-        );
-      } else if (addMoneyTarget.type === 'budget') {
-        setBudgets((current) =>
-          current.map((b) => {
-            if (b.id === addMoneyTarget.id) {
-              const newSpent = b.spent + amount;
-              const newPercent = Math.min(100, Math.round((newSpent / b.total) * 100));
-              return { ...b, spent: newSpent, percent: newPercent };
-            }
-            return b;
-          })
-        );
-      }
-
-      setAddMoneyAmount('');
-      setAddMoneyTarget(null);
-    } catch (err) {
-      console.error('Add money failed:', err);
-      setAddMoneyError(t('failed_to_save'));
+    if (addMoneyTarget.type === 'goal') {
+      setGoals((current) =>
+        current.map((g) => (g.id === addMoneyTarget.id ? { ...g, current: g.current + amount } : g))
+      );
+    } else if (addMoneyTarget.type === 'budget') {
+      setBudgets((current) =>
+        current.map((b) => {
+          if (b.id === addMoneyTarget.id) {
+            const newSpent = b.spent + amount;
+            const newPercent = Math.min(100, Math.round((newSpent / b.total) * 100));
+            return { ...b, spent: newSpent, percent: newPercent };
+          }
+          return b;
+        })
+      );
     }
+
+    setAddMoneyAmount('');
+    setAddMoneyTarget(null);
   };
 
   const openEditGoal = (goal: Goal) => {
@@ -218,7 +193,7 @@ export default function PlanScreen() {
               </svg>
             </button>
             <button className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-card border border-border-light text-text-secondary hover:text-brand transition-colors">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="11" cy="11" r="8" />
                 <line x1="21" y1="21" x2="16.65" y2="16.65" />
               </svg>
@@ -240,19 +215,19 @@ export default function PlanScreen() {
               return <div className="card-lg p-5" key={goal.id}>
                 <div className="flex items-start justify-between mb-4">
                   <div>
-                   <div className="flex items-center gap-1">
-                     <h4 className="text-base font-bold text-text-primary">{goal.title}</h4>
-                     <button
-                       onClick={() => openEditGoal(goal)}
-                       className="w-7 h-7 rounded-lg bg-gray-50 border border-border-light flex items-center justify-center text-sm text-text-secondary hover:bg-gray-100 hover:text-brand transition-colors"
-                       aria-label="Edit goal"
-                     >✏️</button>
-                     <button
-                       onClick={() => setConfirmDelete({ type: 'goal', id: goal.id })}
-                       className="w-7 h-7 rounded-lg bg-red-50 border border-red-100 flex items-center justify-center text-sm text-red-500 hover:bg-red-100 transition-colors"
-                       aria-label="Delete goal"
-                     >🗑️</button>
-                   </div>
+                    <div className="flex items-center gap-1">
+                      <h4 className="text-base font-bold text-text-primary">{goal.title}</h4>
+                      <button
+                        onClick={() => openEditGoal(goal)}
+                        className="w-7 h-7 rounded-lg bg-gray-50 border border-border-light flex items-center justify-center text-sm text-text-secondary hover:bg-gray-100 hover:text-brand transition-colors"
+                        aria-label="Edit goal"
+                      >✏️</button>
+                      <button
+                        onClick={() => setConfirmDelete({ type: 'goal', id: goal.id })}
+                        className="w-7 h-7 rounded-lg bg-red-50 border border-red-100 flex items-center justify-center text-sm text-red-500 hover:bg-red-100 transition-colors"
+                        aria-label="Delete goal"
+                      >🗑️</button>
+                    </div>
                     <p className="text-xs text-text-secondary mt-0.5">{goal.subtitle}</p>
                   </div>
                   <div className="text-right"><p className="text-[10px] text-text-secondary font-medium">{t('of')} {formatCurrency(goal.target)}</p><p className="text-lg font-extrabold text-brand">{formatCurrency(goal.current)}</p></div>
@@ -378,7 +353,7 @@ export default function PlanScreen() {
           <input value={editAmount} onChange={(e) => setEditAmount(e.target.value)} className="input-field mt-2" type="number" min="1" inputMode="decimal" placeholder="0" required />
           <button className="btn-primary mt-6" type="submit">{t('save')}</button>
         </form>
-       </BottomSheet>
+      </BottomSheet>
 
       <BottomSheet open={confirmDelete !== null} onClose={() => setConfirmDelete(null)}>
         <div className="px-5 pb-8">

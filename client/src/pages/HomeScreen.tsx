@@ -9,6 +9,17 @@ import BottomSheet from '../components/ui/BottomSheet';
 import type { Transaction } from '@shared/types';
 import { fetchTransactions, deleteTransaction } from '../services/api';
 
+type Goal = { id: string; title: string; current: number; target: number };
+type Budget = { id: string; name: string; spent: number; total: number };
+
+function loadPlanFromStorage(key: string, fallback: unknown): unknown {
+  try {
+    return JSON.parse(localStorage.getItem(key) || 'null') ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 const categoryMeta: Record<string, { icon: string; color: string }> = {
   Food: { icon: '🍔', color: '#3B82F6' },
   Rent: { icon: '🏠', color: '#8B5CF6' },
@@ -30,6 +41,19 @@ export default function HomeScreen() {
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
   const [sheet, setSheet] = useState<'notifications' | 'month' | null>(null);
   const [selectedMonth, setSelectedMonth] = useState('September 2026');
+  const planKey = user ? `plan_${user.email}` : 'plan_guest';
+  const [goals, setGoals] = useState<Goal[]>(() => loadPlanFromStorage(`${planKey}_goals`, []) as Goal[]);
+  const [budgets, setBudgets] = useState<Budget[]>(() => loadPlanFromStorage(`${planKey}_budgets`, []) as Budget[]);
+
+  useEffect(() => {
+    const syncPlan = () => {
+      setGoals(loadPlanFromStorage(`${planKey}_goals`, []) as Goal[]);
+      setBudgets(loadPlanFromStorage(`${planKey}_budgets`, []) as Budget[]);
+    };
+    syncPlan();
+    window.addEventListener('focus', syncPlan);
+    return () => window.removeEventListener('focus', syncPlan);
+  }, [planKey]);
 
   const loadTransactions = async () => {
     try {
@@ -56,6 +80,9 @@ export default function HomeScreen() {
       { income: 0, expense: 0 }
     );
   }, [transactions]);
+
+  const goalsTotal = useMemo(() => goals.reduce((sum, g) => sum + g.current, 0), [goals]);
+  const budgetsTotal = useMemo(() => budgets.reduce((sum, b) => sum + b.spent, 0), [budgets]);
 
   const balance = totals.income - totals.expense;
   const recentTransactions = useMemo(() => transactions.slice(0, 5), [transactions]);
@@ -125,36 +152,58 @@ export default function HomeScreen() {
                Details ›
              </button>
           </div>
-          <div className="grid grid-cols-2 gap-2.5">
-            <div className="rounded-[16px] border border-[#f0f0f2] bg-white p-3 shadow-[0_3px_12px_rgba(17,24,39,.04)]">
-              <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-full bg-[#e5f4ff]">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22C55E" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="12" y1="19" x2="12" y2="5" />
-                  <polyline points="5 12 12 5 19 12" />
-                </svg>
-              </div>
-              <div>
-                <p className="text-[10px] text-text-secondary">{t('income')} ⓘ</p>
-                <p className="mt-0.5 text-[14px] font-bold text-text-primary">
-                  {loading ? '...' : formatCurrency(totals.income)}
-                </p>
-              </div>
-            </div>
-            <div className="rounded-[16px] border border-[#f0f0f2] bg-white p-3 shadow-[0_3px_12px_rgba(17,24,39,.04)]">
-              <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-full bg-[#fff0ed]">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="12" y1="5" x2="12" y2="19" />
-                  <polyline points="19 12 12 19 5 12" />
-                </svg>
-              </div>
-              <div>
-                <p className="text-[10px] text-text-secondary">{t('expense')} ⓘ</p>
-                <p className="mt-0.5 text-[14px] font-bold text-text-primary">
-                  {loading ? '...' : formatCurrency(totals.expense)}
-                </p>
-              </div>
-            </div>
-          </div>
+           <div className="grid grid-cols-2 gap-2.5">
+             <div className="rounded-[16px] border border-[#f0f0f2] bg-white p-3 shadow-[0_3px_12px_rgba(17,24,39,.04)]">
+               <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-full bg-[#e5f4ff]">
+                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22C55E" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                   <line x1="12" y1="19" x2="12" y2="5" />
+                   <polyline points="5 12 12 5 19 12" />
+                 </svg>
+               </div>
+               <div>
+                 <p className="text-[10px] text-text-secondary">{t('income')}</p>
+                 <p className="mt-0.5 text-[14px] font-bold text-text-primary">
+                   {loading ? '...' : formatCurrency(totals.income)}
+                 </p>
+               </div>
+             </div>
+             <div className="rounded-[16px] border border-[#f0f0f2] bg-white p-3 shadow-[0_3px_12px_rgba(17,24,39,.04)]">
+               <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-full bg-[#fff0ed]">
+                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                   <line x1="12" y1="5" x2="12" y2="19" />
+                   <polyline points="19 12 12 19 5 12" />
+                 </svg>
+               </div>
+               <div>
+                 <p className="text-[10px] text-text-secondary">{t('expense')}</p>
+                 <p className="mt-0.5 text-[14px] font-bold text-text-primary">
+                   {loading ? '...' : formatCurrency(totals.expense)}
+                 </p>
+               </div>
+             </div>
+             <div className="rounded-[16px] border border-[#f0f0f2] bg-white p-3 shadow-[0_3px_12px_rgba(17,24,39,.04)]">
+               <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-full bg-blue-50">
+                 <span className="text-lg">🎯</span>
+               </div>
+               <div>
+                 <p className="text-[10px] text-text-secondary">{t('goals')}</p>
+                 <p className="mt-0.5 text-[14px] font-bold text-text-primary">
+                   {loading ? '...' : formatCurrency(goalsTotal)}
+                 </p>
+               </div>
+             </div>
+             <div className="rounded-[16px] border border-[#f0f0f2] bg-white p-3 shadow-[0_3px_12px_rgba(17,24,39,.04)]">
+               <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-full bg-amber-50">
+                 <span className="text-lg">💳</span>
+               </div>
+               <div>
+                 <p className="text-[10px] text-text-secondary">{t('budgets')}</p>
+                 <p className="mt-0.5 text-[14px] font-bold text-text-primary">
+                   {loading ? '...' : formatCurrency(budgetsTotal)}
+                 </p>
+               </div>
+             </div>
+           </div>
         </section>
 
         {/* Insight Card */}
