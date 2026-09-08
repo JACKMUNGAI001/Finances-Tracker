@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import BottomNav from '../components/BottomNav';
 import ProgressRing from '../components/ProgressRing';
@@ -56,6 +56,14 @@ export default function PlanScreen() {
   const [editName, setEditName] = useState('');
   const [editAmount, setEditAmount] = useState('');
   const [confirmDelete, setConfirmDelete] = useState<EditTarget>(null);
+
+  // Split goals into active and completed
+  const activeGoals = useMemo(() => goals.filter(g => g.current < g.target), [goals]);
+  const completedGoals = useMemo(() => goals.filter(g => g.current >= g.target), [goals]);
+  
+  // Split budgets into active and completed
+  const activeBudgets = useMemo(() => budgets.filter(b => b.spent < b.total), [budgets]);
+  const completedBudgets = useMemo(() => budgets.filter(b => b.spent >= b.total), [budgets]);
 
   useEffect(() => {
     saveToStorage(`${storageKey}_goals`, goals);
@@ -224,8 +232,9 @@ export default function PlanScreen() {
             <button className="text-xs font-semibold text-brand hover:text-brand-dark transition-colors">{t('view_all')}</button>
           </div>
 
+          {/* Active Goals */}
           <div className="space-y-3">
-            {goals.map((goal) => {
+            {activeGoals.map((goal) => {
               const percent = Math.min(100, Math.round((goal.current / goal.target) * 100));
               const remaining = Math.max(0, goal.target - goal.current);
               return <div className="card-lg p-5" key={goal.id}>
@@ -258,8 +267,31 @@ export default function PlanScreen() {
                 </div>
               </div>;
             })}
-            {goals.length === 0 && <div className="card-lg p-6 text-center text-sm text-text-secondary">{t('no_goals')}</div>}
+            {activeGoals.length === 0 && <div className="card-lg p-6 text-center text-sm text-text-secondary">{t('no_goals')}</div>}
           </div>
+
+          {/* Completed Goals */}
+          {completedGoals.length > 0 && (
+            <div className="mt-4 space-y-3">
+              <h4 className="text-sm font-semibold text-text-secondary flex items-center gap-2">
+                <span className="w-5 h-5 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-xs">✓</span>
+                {t('completed_goals')} ({completedGoals.length})
+              </h4>
+              {completedGoals.map((goal: Goal) => (
+                <div key={goal.id} className="card-lg p-5 bg-green-50 border border-green-100">
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <h4 className="text-base font-bold text-text-primary">{goal.title}</h4>
+                      <p className="text-xs text-text-secondary mt-0.5">{goal.subtitle}</p>
+                    </div>
+                    <div className="text-right"><p className="text-[10px] text-text-secondary font-medium">{t('of')} {formatCurrency(goal.target)}</p><p className="text-lg font-extrabold text-green-600">{formatCurrency(goal.current)}</p></div>
+                  </div>
+                  <div className="progress-bar h-2.5 mb-3"><div className="progress-fill bg-gradient-to-r from-green-500 to-green-400" style={{ width: '100%' }} /></div>
+                  <p className="text-xs font-medium text-green-700">{t('goal_completed')}</p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Budgets Section */}
@@ -269,8 +301,9 @@ export default function PlanScreen() {
             <button className="text-xs font-semibold text-brand hover:text-brand-dark transition-colors">{t('view_all')}</button>
           </div>
 
+          {/* Active Budgets */}
           <div className="grid grid-cols-2 gap-3">
-            {budgets.map((budget) => (
+            {activeBudgets.map((budget) => (
               <div key={budget.id} className="card p-4">
                 <div className="relative mb-3">
                   <ProgressRing progress={budget.percent} size={48} strokeWidth={6} color={budget.color}>
@@ -300,7 +333,33 @@ export default function PlanScreen() {
               </div>
             ))}
           </div>
-          {budgets.length === 0 && <div className="card mt-1 p-6 text-center text-sm text-text-secondary">{t('no_budgets')}</div>}
+          {activeBudgets.length === 0 && <div className="card mt-1 p-6 text-center text-sm text-text-secondary">{t('no_budgets')}</div>}
+
+          {/* Completed Budgets */}
+          {completedBudgets.length > 0 && (
+            <div className="mt-4">
+              <h4 className="text-sm font-semibold text-text-secondary flex items-center gap-2">
+                <span className="w-5 h-5 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-xs">✓</span>
+                {t('completed_budgets')} ({completedBudgets.length})
+              </h4>
+              <div className="grid grid-cols-2 gap-3 mt-2">
+                {completedBudgets.map((budget: Budget) => (
+                  <div key={budget.id} className="card p-4 bg-green-50 border border-green-100">
+                    <div className="relative mb-3">
+                      <ProgressRing progress={100} size={48} strokeWidth={6} color="#22C55E">
+                        <span className="text-xs font-extrabold text-green-600">100%</span>
+                      </ProgressRing>
+                    </div>
+                    <div className="flex items-center justify-center gap-1.5 mb-1">
+                      <span className="text-sm">{budget.icon}</span>
+                      <p className="text-xs font-semibold text-text-primary">{budget.name}</p>
+                    </div>
+                    <p className="text-[10px] text-green-700 font-medium">{t('budget_completed')}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
