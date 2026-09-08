@@ -9,6 +9,17 @@ import BottomSheet from '../components/ui/BottomSheet';
 import type { Transaction } from '@shared/types';
 import { fetchTransactions, deleteTransaction } from '../services/api';
 
+type Goal = { id: string; title: string; current: number; target: number };
+type Budget = { id: string; name: string; spent: number; total: number };
+
+function loadPlanFromStorage(key: string, fallback: unknown): unknown {
+  try {
+    return JSON.parse(localStorage.getItem(key) || 'null') ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 const categoryMeta: Record<string, { icon: string; color: string }> = {
   Food: { icon: '🍔', color: '#3B82F6' },
   Rent: { icon: '🏠', color: '#8B5CF6' },
@@ -56,6 +67,23 @@ export default function HomeScreen() {
       { income: 0, expense: 0 }
     );
   }, [transactions]);
+
+  const planKey = user ? `plan_${user.email}` : 'plan_guest';
+  const [goals, setGoals] = useState<Goal[]>(() => loadPlanFromStorage(`${planKey}_goals`, []) as Goal[]);
+  const [budgets, setBudgets] = useState<Budget[]>(() => loadPlanFromStorage(`${planKey}_budgets`, []) as Budget[]);
+
+  useEffect(() => {
+    const syncPlan = () => {
+      setGoals(loadPlanFromStorage(`${planKey}_goals`, []) as Goal[]);
+      setBudgets(loadPlanFromStorage(`${planKey}_budgets`, []) as Budget[]);
+    };
+    syncPlan();
+    window.addEventListener('focus', syncPlan);
+    return () => window.removeEventListener('focus', syncPlan);
+  }, [planKey]);
+
+  const goalsTotal = useMemo(() => goals.reduce((sum, g) => sum + g.current, 0), [goals]);
+  const budgetsTotal = useMemo(() => budgets.reduce((sum, b) => sum + b.spent, 0), [budgets]);
 
   const balance = totals.income - totals.expense;
   const recentTransactions = useMemo(() => transactions.slice(0, 5), [transactions]);
@@ -154,7 +182,29 @@ export default function HomeScreen() {
                   </p>
                 </div>
               </div>
-</div>
+              <div className="rounded-[16px] border border-[#f0f0f2] bg-white p-3 shadow-[0_3px_12px_rgba(17,24,39,.04)]">
+                <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-full bg-blue-50">
+                  <span className="text-lg">🎯</span>
+                </div>
+                <div>
+                  <p className="text-[10px] text-text-secondary">{t('goals')}</p>
+                  <p className="mt-0.5 text-[14px] font-bold text-text-primary">
+                    {loading ? '...' : formatCurrency(goalsTotal)}
+                  </p>
+                </div>
+              </div>
+              <div className="rounded-[16px] border border-[#f0f0f2] bg-white p-3 shadow-[0_3px_12px_rgba(17,24,39,.04)]">
+                <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-full bg-amber-50">
+                  <span className="text-lg">💳</span>
+                </div>
+                <div>
+                  <p className="text-[10px] text-text-secondary">{t('budgets')}</p>
+                  <p className="mt-0.5 text-[14px] font-bold text-text-primary">
+                    {loading ? '...' : formatCurrency(budgetsTotal)}
+                  </p>
+                </div>
+              </div>
+            </div>
          </section>
 
         {/* Insight Card */}
