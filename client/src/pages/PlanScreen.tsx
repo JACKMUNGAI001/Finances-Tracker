@@ -20,6 +20,7 @@ type Budget = { id: string; name: string; spent: number; total: number; percent:
 
 type AddMoneyTarget = { type: 'goal'; id: string } | { type: 'budget'; id: string } | null;
 type EditTarget = { type: 'goal'; id: string } | { type: 'budget'; id: string } | null;
+type PlanTab = 'goals' | 'budgets';
 
 function loadFromStorage(key: string, fallback: unknown): unknown {
   try {
@@ -43,6 +44,7 @@ export default function PlanScreen() {
   const { currency, formatCurrency, t } = useSettings();
   const [searchParams] = useSearchParams();
   const createParam = searchParams.get('create');
+  const [planTab, setPlanTab] = useState<PlanTab>(createParam === 'budget' ? 'budgets' : 'goals');
   const [goals, setGoals] = useState<Goal[]>(() => loadFromStorage(`${storageKey}_goals`, []) as Goal[]);
   const [goalOpen, setGoalOpen] = useState(() => createParam === 'goal');
   const [budgetOpen, setBudgetOpen] = useState(() => createParam === 'budget');
@@ -75,7 +77,10 @@ export default function PlanScreen() {
 
   useEffect(() => {
     if (createParam === 'goal') setGoalOpen(true);
-    if (createParam === 'budget') setBudgetOpen(true);
+    if (createParam === 'budget') {
+      setPlanTab('budgets');
+      setBudgetOpen(true);
+    }
   }, [createParam]);
 
   const addGoal = (event: React.FormEvent) => {
@@ -208,8 +213,14 @@ export default function PlanScreen() {
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => { setTitle(''); setTarget(''); setGoalOpen(true); }}
+              onClick={() => {
+                setTitle('');
+                setTarget('');
+                if (planTab === 'goals') setGoalOpen(true);
+                else setBudgetOpen(true);
+              }}
               className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-card border border-border-light text-text-secondary hover:text-brand transition-colors"
+              aria-label={planTab === 'goals' ? t('create_goal') : t('create_budget')}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="12" y1="5" x2="12" y2="19" />
@@ -225,12 +236,29 @@ export default function PlanScreen() {
           </div>
         </div>
 
-        {/* Goals Section */}
+        {/* Plan tabs */}
+        <div className="mt-4 bg-[#F1F1F3] p-1 rounded-full flex" role="tablist" aria-label={t('my_plan')}>
+          {(['goals', 'budgets'] as PlanTab[]).map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              role="tab"
+              aria-selected={planTab === tab}
+              onClick={() => setPlanTab(tab)}
+              className={`flex-1 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 ${
+                planTab === tab
+                  ? 'bg-white text-text-primary shadow-sm'
+                  : 'text-text-secondary hover:text-text-primary'
+              }`}
+            >
+              {t(tab)}
+            </button>
+          ))}
+        </div>
+
+        {planTab === 'goals' && (
         <div className="mt-6">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="section-title">{t('goals')}</h3>
-            <button className="text-xs font-semibold text-brand hover:text-brand-dark transition-colors">{t('view_all')}</button>
-          </div>
+          <h3 className="section-title mb-3">{t('goals')}</h3>
 
           {/* Active Goals */}
           <div className="space-y-3">
@@ -300,13 +328,11 @@ export default function PlanScreen() {
             </div>
           )}
         </div>
+        )}
 
-        {/* Budgets Section */}
-        <div className="mt-8">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="section-title">{t('budgets')}</h3>
-            <button className="text-xs font-semibold text-brand hover:text-brand-dark transition-colors">{t('view_all')}</button>
-          </div>
+        {planTab === 'budgets' && (
+        <div className="mt-6">
+          <h3 className="section-title mb-3">{t('budgets')}</h3>
 
           {/* Active Budgets */}
           <div className="grid grid-cols-2 gap-3">
@@ -375,6 +401,7 @@ export default function PlanScreen() {
             </div>
           )}
         </div>
+        )}
       </div>
 
       <BottomNav />
