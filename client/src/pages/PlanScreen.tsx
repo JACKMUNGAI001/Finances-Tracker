@@ -284,7 +284,14 @@ export default function PlanScreen() {
                       <h4 className="text-base font-bold text-text-primary">{goal.title}</h4>
                       <p className="text-xs text-text-secondary mt-0.5">{goal.subtitle}</p>
                     </div>
-                    <div className="text-right"><p className="text-[10px] text-text-secondary font-medium">{t('of')} {formatCurrency(goal.target)}</p><p className="text-lg font-extrabold text-green-600">{formatCurrency(goal.current)}</p></div>
+                    <div className="flex items-center gap-1">
+                      <div className="text-right"><p className="text-[10px] text-text-secondary font-medium">{t('of')} {formatCurrency(goal.target)}</p><p className="text-lg font-extrabold text-green-600">{formatCurrency(goal.current)}</p></div>
+                      <button
+                        onClick={() => setConfirmDelete({ type: 'goal', id: goal.id })}
+                        className="w-7 h-7 rounded-lg bg-red-50 border border-red-100 flex items-center justify-center text-sm text-red-500 hover:bg-red-100 transition-colors"
+                        aria-label="Delete goal"
+                      >🗑️</button>
+                    </div>
                   </div>
                   <div className="progress-bar h-2.5 mb-3"><div className="progress-fill bg-gradient-to-r from-green-500 to-green-400" style={{ width: '100%' }} /></div>
                   <p className="text-xs font-medium text-green-700">{t('goal_completed')}</p>
@@ -353,6 +360,13 @@ export default function PlanScreen() {
                     <div className="flex items-center justify-center gap-1.5 mb-1">
                       <span className="text-sm">{budget.icon}</span>
                       <p className="text-xs font-semibold text-text-primary">{budget.name}</p>
+                    </div>
+                    <div className="flex items-center justify-center gap-1">
+                      <button
+                        onClick={() => setConfirmDelete({ type: 'budget', id: budget.id })}
+                        className="w-6 h-6 rounded-lg bg-red-50 border border-red-100 flex items-center justify-center text-xs text-red-500 hover:bg-red-100 transition-colors"
+                        aria-label="Delete budget"
+                      >🗑️</button>
                     </div>
                     <p className="text-[10px] text-green-700 font-medium">{t('budget_completed')}</p>
                   </div>
