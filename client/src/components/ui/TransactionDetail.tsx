@@ -7,7 +7,6 @@ interface TransactionDetailProps {
   transaction: Transaction;
   onClose: () => void;
   onDelete: (id: string | number) => void;
-  onEdit?: (transaction: Transaction) => void;
 }
 
 const categoryMeta: Record<string, { icon: string; color: string }> = {
@@ -22,7 +21,7 @@ const categoryMeta: Record<string, { icon: string; color: string }> = {
   Other: { icon: '📦', color: '#6B7280' },
 };
 
-export default function TransactionDetail({ transaction, onClose, onDelete, onEdit }: TransactionDetailProps) {
+export default function TransactionDetail({ transaction, onClose, onDelete }: TransactionDetailProps) {
   const { t, formatCurrency, language } = useSettings();
   const meta = categoryMeta[transaction.category] || categoryMeta.Other;
   const isIncome = transaction.type === 'income';
@@ -89,14 +88,6 @@ export default function TransactionDetail({ transaction, onClose, onDelete, onEd
              >
                {t('close')}
              </button>
-             {onEdit && (
-               <button
-                 onClick={() => onEdit(transaction)}
-                 className="flex-1 py-3.5 rounded-full bg-brand-soft text-brand text-sm font-semibold hover:bg-brand transition-colors"
-               >
-                 {t('edit')}
-               </button>
-             )}
              <button
                onClick={() => setConfirmDelete(true)}
                className="flex-1 py-3.5 rounded-full bg-red-50 text-red-500 text-sm font-semibold hover:bg-red-100 transition-colors"

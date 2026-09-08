@@ -3,7 +3,6 @@ import type { Transaction } from '@shared/types';
 import { fetchTransactions, createTransaction, deleteTransaction } from '../services/api';
 import { useSettings } from '../contexts/SettingsContext';
 import TransactionDetail from '../components/ui/TransactionDetail';
-import EditTransactionSheet from '../components/ui/EditTransactionSheet';
 import BottomSheet from '../components/ui/BottomSheet';
 import BottomNav from '../components/BottomNav';
 import FabMenu from '../components/ui/FabMenu';
@@ -27,8 +26,6 @@ export default function TransactionsPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterType>('all');
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
-  const [editTx, setEditTx] = useState<Transaction | null>(null);
-  const [editConfirmTx, setEditConfirmTx] = useState<Transaction | null>(null);
   const [deleteTx, setDeleteTx] = useState<Transaction | null>(null);
   const { formatCurrency, t } = useSettings();
 
@@ -74,12 +71,6 @@ export default function TransactionsPage() {
     } finally {
       setDeleteTx(null);
     }
-  };
-
-  const handleUpdate = (updated: Transaction) => {
-    setTransactions(prev =>
-      prev.map(t => (t.id === updated.id ? updated : t))
-    );
   };
 
   const grouped = useMemo(() => {
@@ -188,17 +179,6 @@ export default function TransactionsPage() {
                         </button>
                         <div className="flex flex-col gap-1 flex-shrink-0">
                           <button
-                            onClick={() => tx.id && setEditConfirmTx(tx)}
-                            className="w-7 h-7 flex items-center justify-center rounded-full bg-gray-50 text-text-secondary hover:bg-brand-soft hover:text-brand transition-colors"
-                            aria-label="Edit"
-                          >
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M12 18a4 4 0 0 0 7-3v-1a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v1a4 4 0 0 0 7 3z" />
-                              <circle cx="12" cy="8" r="2" />
-                              <path d="M8 16l8 0" />
-                            </svg>
-                          </button>
-                          <button
                             onClick={() => tx.id && handleDelete(tx.id)}
                             className="w-7 h-7 flex items-center justify-center rounded-full bg-gray-50 text-text-secondary hover:bg-red-50 hover:text-red-500 transition-colors"
                             aria-label="Delete"
@@ -231,45 +211,8 @@ export default function TransactionsPage() {
           transaction={selectedTx}
           onClose={() => setSelectedTx(null)}
           onDelete={handleDelete}
-          onEdit={(tx) => { setEditConfirmTx(tx); setSelectedTx(null); }}
         />
       )}
-
-      <BottomSheet open={!!editTx} onClose={() => setEditTx(null)}>
-        <EditTransactionSheet
-          open={!!editTx}
-          onClose={() => setEditTx(null)}
-          onSuccess={handleUpdate}
-          transaction={editTx}
-        />
-      </BottomSheet>
-
-      <BottomSheet open={!!editConfirmTx} onClose={() => setEditConfirmTx(null)}>
-        <div className="px-5 pb-8">
-          <h2 className="text-xl font-bold text-text-primary">{t('edit')}</h2>
-          <p className="mt-1 text-sm text-text-secondary">{t('edit_transaction_confirm')}</p>
-          {editConfirmTx && editConfirmTx.description && (
-            <p className="block mt-2 font-medium text-text-primary">"{editConfirmTx.description}"</p>
-          )}
-          <div className="mt-6 flex gap-3">
-            <button
-              onClick={() => setEditConfirmTx(null)}
-              className="flex-1 py-3.5 rounded-full border border-gray-200 text-sm font-semibold text-text-secondary hover:bg-gray-50 transition-colors"
-            >
-              {t('cancel')}
-            </button>
-            <button
-              onClick={() => {
-                if (editConfirmTx) setEditTx(editConfirmTx);
-                setEditConfirmTx(null);
-              }}
-              className="flex-1 py-3.5 rounded-full bg-brand-soft text-brand text-sm font-semibold hover:bg-brand transition-colors"
-            >
-              {t('continue')}
-            </button>
-          </div>
-        </div>
-      </BottomSheet>
 
       <BottomSheet open={!!deleteTx} onClose={() => setDeleteTx(null)}>
         <div className="px-5 pb-8">

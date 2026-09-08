@@ -19,7 +19,6 @@ type Goal = {
 type Budget = { id: string; name: string; spent: number; total: number; percent: number; color: string; icon: string };
 
 type AddMoneyTarget = { type: 'goal'; id: string } | { type: 'budget'; id: string } | null;
-type EditTarget = { type: 'goal'; id: string } | { type: 'budget'; id: string } | null;
 type PlanTab = 'goals' | 'budgets';
 type PlanStatus = 'active' | 'completed';
 
@@ -56,10 +55,7 @@ export default function PlanScreen() {
   const [addMoneyTarget, setAddMoneyTarget] = useState<AddMoneyTarget>(null);
   const [addMoneyAmount, setAddMoneyAmount] = useState('');
   const [addMoneyError, setAddMoneyError] = useState<string | null>(null);
-  const [editTarget, setEditTarget] = useState<EditTarget>(null);
-  const [editName, setEditName] = useState('');
-  const [editAmount, setEditAmount] = useState('');
-  const [confirmDelete, setConfirmDelete] = useState<EditTarget>(null);
+  const [confirmDelete, setConfirmDelete] = useState<AddMoneyTarget>(null);
 
   // Split goals into active and completed
   const activeGoals = useMemo(() => goals.filter(g => g.current < g.target), [goals]);
@@ -164,38 +160,6 @@ export default function PlanScreen() {
     }
   };
 
-  const openEditGoal = (goal: Goal) => {
-    setEditTarget({ type: 'goal', id: goal.id });
-    setEditName(goal.title);
-    setEditAmount(String(goal.target));
-  };
-
-  const openEditBudget = (budget: Budget) => {
-    setEditTarget({ type: 'budget', id: budget.id });
-    setEditName(budget.name);
-    setEditAmount(String(budget.total));
-  };
-
-  const handleEdit = (event: React.FormEvent) => {
-    event.preventDefault();
-    const amount = Number(editAmount);
-    if (!editName.trim() || !Number.isFinite(amount) || amount <= 0) return;
-
-    if (editTarget?.type === 'goal') {
-      setGoals((current) =>
-        current.map((g) => (g.id === editTarget.id ? { ...g, title: editName.trim() } : g))
-      );
-    } else if (editTarget?.type === 'budget') {
-      setBudgets((current) =>
-        current.map((b) => (b.id === editTarget.id ? { ...b, name: editName.trim() } : b))
-      );
-    }
-
-    setEditTarget(null);
-    setEditName('');
-    setEditAmount('');
-  };
-
   const deleteGoal = (id: string) => {
     setGoals((current) => current.filter((g) => g.id !== id));
   };
@@ -290,11 +254,6 @@ export default function PlanScreen() {
                     <div className="flex items-center gap-1">
                       <h4 className="text-base font-bold text-text-primary">{goal.title}</h4>
                       <button
-                        onClick={() => openEditGoal(goal)}
-                        className="w-7 h-7 rounded-lg bg-gray-50 border border-border-light flex items-center justify-center text-sm text-text-secondary hover:bg-gray-100 hover:text-brand transition-colors"
-                        aria-label="Edit goal"
-                      >✏️</button>
-                      <button
                         onClick={() => setConfirmDelete({ type: 'goal', id: goal.id })}
                         className="w-7 h-7 rounded-lg bg-red-50 border border-red-100 flex items-center justify-center text-sm text-red-500 hover:bg-red-100 transition-colors"
                         aria-label="Delete goal"
@@ -380,11 +339,6 @@ export default function PlanScreen() {
                   <span className="text-sm">{budget.icon}</span>
                   <p className="text-xs font-semibold text-text-primary">{budget.name}</p>
                   <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => openEditBudget(budget)}
-                      className="w-6 h-6 rounded-lg bg-gray-50 border border-border-light flex items-center justify-center text-xs text-text-secondary hover:bg-gray-100 hover:text-brand transition-colors"
-                      aria-label="Edit budget"
-                    >✏️</button>
                     <button
                       onClick={() => setConfirmDelete({ type: 'budget', id: budget.id })}
                       className="w-6 h-6 rounded-lg bg-red-50 border border-red-100 flex items-center justify-center text-xs text-red-500 hover:bg-red-100 transition-colors"
@@ -486,17 +440,6 @@ export default function PlanScreen() {
             placeholder="0"
             required
           />
-          <button className="btn-primary mt-6" type="submit">{t('save')}</button>
-        </form>
-      </BottomSheet>
-
-      <BottomSheet open={editTarget !== null} onClose={() => setEditTarget(null)}>
-        <form onSubmit={handleEdit} className="px-5 pb-8">
-          <h2 className="text-xl font-bold text-text-primary">{t('edit')}</h2>
-          <label className="mt-6 block text-sm font-semibold text-text-primary">{t('name')}</label>
-          <input value={editName} onChange={(e) => setEditName(e.target.value)} className="input-field mt-2" placeholder={t('edit_name_placeholder')} required />
-          <label className="mt-5 block text-sm font-semibold text-text-primary">{t('amount')} ({currency.symbol})</label>
-          <input value={editAmount} onChange={(e) => setEditAmount(e.target.value)} className="input-field mt-2" type="number" min="1" inputMode="decimal" placeholder="0" required />
           <button className="btn-primary mt-6" type="submit">{t('save')}</button>
         </form>
       </BottomSheet>
