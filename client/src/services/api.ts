@@ -35,9 +35,18 @@ export async function fetchUserPlan(): Promise<UserPlan | null> {
 }
 
 export async function saveUserPlan(plan: UserPlan): Promise<void> {
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError) throw authError;
+  if (!user) throw new Error('You must be signed in to save a plan.');
+
   const { error } = await supabase
     .from('user_plans')
-    .upsert({ goals: plan.goals, budgets: plan.budgets, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+    .upsert({
+      user_id: user.id,
+      goals: plan.goals,
+      budgets: plan.budgets,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id' });
   if (error) throw error;
 }
 
