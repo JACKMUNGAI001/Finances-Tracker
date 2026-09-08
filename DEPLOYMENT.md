@@ -1,7 +1,8 @@
 # Supabase setup
 
-1. In Supabase, open **SQL Editor** and run the SQL in
-   `supabase/migrations/20260904210000_create_transactions.sql`.
+1. In Supabase, open **SQL Editor** and run every migration in
+   `supabase/migrations/` in filename order. This creates the transactions
+   table and the shared Goals/Budgets plan store.
 2. In **Authentication → Providers**, ensure Email is enabled.
 3. For development, add `http://localhost:5173` to **Authentication → URL Configuration → Redirect URLs**.
 4. Deploy the `client` folder to a static host such as Vercel or Netlify. Set

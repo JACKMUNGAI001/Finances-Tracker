@@ -1,6 +1,46 @@
 import type { Transaction } from '@shared/types';
 import { supabase } from './supabase';
 
+export type PlanGoal = {
+  id: string;
+  title: string;
+  subtitle: string;
+  target: number;
+  current: number;
+};
+
+export type PlanBudget = {
+  id: string;
+  name: string;
+  spent: number;
+  total: number;
+  percent: number;
+  color: string;
+  icon: string;
+};
+
+export type UserPlan = { goals: PlanGoal[]; budgets: PlanBudget[] };
+
+export async function fetchUserPlan(): Promise<UserPlan | null> {
+  const { data, error } = await supabase
+    .from('user_plans')
+    .select('goals, budgets')
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  return {
+    goals: (data.goals ?? []) as PlanGoal[],
+    budgets: (data.budgets ?? []) as PlanBudget[],
+  };
+}
+
+export async function saveUserPlan(plan: UserPlan): Promise<void> {
+  const { error } = await supabase
+    .from('user_plans')
+    .upsert({ goals: plan.goals, budgets: plan.budgets, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+  if (error) throw error;
+}
+
 export async function fetchTransactions(): Promise<Transaction[]> {
   const { data, error } = await supabase.from('transactions').select('id, description, amount, type, category, date').order('date', { ascending: false });
   if (error) throw error;

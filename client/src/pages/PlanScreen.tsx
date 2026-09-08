@@ -6,7 +6,7 @@ import FabMenu from '../components/ui/FabMenu';
 import BottomSheet from '../components/ui/BottomSheet';
 import { useSettings } from '../contexts/SettingsContext';
 import { useAuth } from '../contexts/AuthContext';
-import { createTransaction } from '../services/api';
+import { createTransaction, fetchUserPlan, saveUserPlan } from '../services/api';
 
 type Goal = {
   id: string;
@@ -38,6 +38,14 @@ function saveToStorage(key: string, value: unknown): void {
   }
 }
 
+function mergePlanItems<T extends { id: string }>(remoteItems: T[], localItems: T[]): T[] {
+  const merged = new Map(remoteItems.map((item) => [item.id, item]));
+  localItems.forEach((item) => {
+    if (!merged.has(item.id)) merged.set(item.id, item);
+  });
+  return [...merged.values()];
+}
+
 export default function PlanScreen() {
   const { user } = useAuth();
   const storageKey = user ? `plan_${user.email}` : 'plan_guest';
@@ -56,6 +64,8 @@ export default function PlanScreen() {
   const [addMoneyAmount, setAddMoneyAmount] = useState('');
   const [addMoneyError, setAddMoneyError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<AddMoneyTarget>(null);
+  const [planLoading, setPlanLoading] = useState(true);
+  const [loadedPlanKey, setLoadedPlanKey] = useState<string | null>(null);
 
   // Split goals into active and completed
   const activeGoals = useMemo(() => goals.filter(g => g.current < g.target), [goals]);
@@ -66,12 +76,60 @@ export default function PlanScreen() {
   const completedBudgets = useMemo(() => budgets.filter(b => b.spent >= b.total), [budgets]);
 
   useEffect(() => {
-    saveToStorage(`${storageKey}_goals`, goals);
-  }, [goals, storageKey]);
+    let active = true;
+    const localGoals = loadFromStorage(`${storageKey}_goals`, []) as Goal[];
+    const localBudgets = loadFromStorage(`${storageKey}_budgets`, []) as Budget[];
+
+    const loadPlan = async () => {
+      setPlanLoading(true);
+      setLoadedPlanKey(null);
+      if (!user) {
+        if (active) {
+          setGoals(localGoals);
+          setBudgets(localBudgets);
+          setPlanLoading(false);
+          setLoadedPlanKey(storageKey);
+        }
+        return;
+      }
+
+      try {
+        const remotePlan = await fetchUserPlan();
+        const mergedPlan = {
+          goals: mergePlanItems(remotePlan?.goals ?? [], localGoals),
+          budgets: mergePlanItems(remotePlan?.budgets ?? [], localBudgets),
+        };
+        await saveUserPlan(mergedPlan);
+        if (active) {
+          setGoals(mergedPlan.goals);
+          setBudgets(mergedPlan.budgets);
+        }
+      } catch (error) {
+        console.error('Plan sync failed:', error);
+        if (active) {
+          setGoals(localGoals);
+          setBudgets(localBudgets);
+        }
+      } finally {
+        if (active) {
+          setPlanLoading(false);
+          setLoadedPlanKey(storageKey);
+        }
+      }
+    };
+
+    loadPlan();
+    return () => { active = false; };
+  }, [storageKey, user]);
 
   useEffect(() => {
+    if (planLoading || loadedPlanKey !== storageKey) return;
+    saveToStorage(`${storageKey}_goals`, goals);
     saveToStorage(`${storageKey}_budgets`, budgets);
-  }, [budgets, storageKey]);
+    if (user) {
+      saveUserPlan({ goals, budgets }).catch((error) => console.error('Plan sync failed:', error));
+    }
+  }, [goals, budgets, loadedPlanKey, planLoading, storageKey, user]);
 
   useEffect(() => {
     if (createParam === 'goal') setGoalOpen(true);
