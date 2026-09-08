@@ -218,12 +218,32 @@ export default function PlanScreen() {
     }
   };
 
-  const deleteGoal = (id: string) => {
-    setGoals((current) => current.filter((g) => g.id !== id));
+  const deleteGoal = async (id: string) => {
+    const updatedGoals = goals.filter((goal) => goal.id !== id);
+    setGoals(updatedGoals);
+    saveToStorage(`${storageKey}_goals`, updatedGoals);
+
+    if (user) {
+      try {
+        await saveUserPlan({ goals: updatedGoals, budgets });
+      } catch (error) {
+        console.error('Goal deletion sync failed:', error);
+      }
+    }
   };
 
-  const deleteBudget = (id: string) => {
-    setBudgets((current) => current.filter((b) => b.id !== id));
+  const deleteBudget = async (id: string) => {
+    const updatedBudgets = budgets.filter((budget) => budget.id !== id);
+    setBudgets(updatedBudgets);
+    saveToStorage(`${storageKey}_budgets`, updatedBudgets);
+
+    if (user) {
+      try {
+        await saveUserPlan({ goals, budgets: updatedBudgets });
+      } catch (error) {
+        console.error('Budget deletion sync failed:', error);
+      }
+    }
   };
 
   return (
@@ -515,8 +535,8 @@ export default function PlanScreen() {
             </button>
             <button
               onClick={() => {
-                if (confirmDelete?.type === 'goal') deleteGoal(confirmDelete.id);
-                if (confirmDelete?.type === 'budget') deleteBudget(confirmDelete.id);
+                if (confirmDelete?.type === 'goal') void deleteGoal(confirmDelete.id);
+                if (confirmDelete?.type === 'budget') void deleteBudget(confirmDelete.id);
                 setConfirmDelete(null);
               }}
               className="flex-1 py-3.5 rounded-full bg-red-50 text-red-500 text-sm font-semibold hover:bg-red-100 transition-colors"
