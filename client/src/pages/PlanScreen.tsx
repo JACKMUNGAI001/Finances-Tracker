@@ -38,6 +38,22 @@ function saveToStorage(key: string, value: unknown): void {
   }
 }
 
+function hasStorageFlag(key: string): boolean {
+  try {
+    return localStorage.getItem(key) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+function setStorageFlag(key: string): void {
+  try {
+    localStorage.setItem(key, 'true');
+  } catch {
+    // ignore
+  }
+}
+
 function mergePlanItems<T extends { id: string }>(remoteItems: T[], localItems: T[]): T[] {
   const merged = new Map(remoteItems.map((item) => [item.id, item]));
   localItems.forEach((item) => {
@@ -79,6 +95,7 @@ export default function PlanScreen() {
     let active = true;
     const localGoals = loadFromStorage(`${storageKey}_goals`, []) as Goal[];
     const localBudgets = loadFromStorage(`${storageKey}_budgets`, []) as Budget[];
+    const migrationKey = `${storageKey}_cloud_plan_migrated`;
 
     const loadPlan = async () => {
       setPlanLoading(true);
@@ -95,11 +112,17 @@ export default function PlanScreen() {
 
       try {
         const remotePlan = await fetchUserPlan();
+        const shouldMigrateLocalPlan = !remotePlan || !hasStorageFlag(migrationKey);
         const mergedPlan = {
-          goals: mergePlanItems(remotePlan?.goals ?? [], localGoals),
-          budgets: mergePlanItems(remotePlan?.budgets ?? [], localBudgets),
+          goals: shouldMigrateLocalPlan
+            ? mergePlanItems(remotePlan?.goals ?? [], localGoals)
+            : remotePlan.goals,
+          budgets: shouldMigrateLocalPlan
+            ? mergePlanItems(remotePlan?.budgets ?? [], localBudgets)
+            : remotePlan.budgets,
         };
         await saveUserPlan(mergedPlan);
+        setStorageFlag(migrationKey);
         if (active) {
           setGoals(mergedPlan.goals);
           setBudgets(mergedPlan.budgets);
