@@ -21,6 +21,7 @@ type Budget = { id: string; name: string; spent: number; total: number; percent:
 type AddMoneyTarget = { type: 'goal'; id: string } | { type: 'budget'; id: string } | null;
 type EditTarget = { type: 'goal'; id: string } | { type: 'budget'; id: string } | null;
 type PlanTab = 'goals' | 'budgets';
+type PlanStatus = 'active' | 'completed';
 
 function loadFromStorage(key: string, fallback: unknown): unknown {
   try {
@@ -45,6 +46,7 @@ export default function PlanScreen() {
   const [searchParams] = useSearchParams();
   const createParam = searchParams.get('create');
   const [planTab, setPlanTab] = useState<PlanTab>(createParam === 'budget' ? 'budgets' : 'goals');
+  const [planStatus, setPlanStatus] = useState<PlanStatus>('active');
   const [goals, setGoals] = useState<Goal[]>(() => loadFromStorage(`${storageKey}_goals`, []) as Goal[]);
   const [goalOpen, setGoalOpen] = useState(() => createParam === 'goal');
   const [budgetOpen, setBudgetOpen] = useState(() => createParam === 'budget');
@@ -260,8 +262,25 @@ export default function PlanScreen() {
         <div className="mt-6">
           <h3 className="section-title mb-3">{t('goals')}</h3>
 
+          <div className="mb-5 bg-[#F1F1F3] p-1 rounded-full flex" role="tablist" aria-label={t('goals')}>
+            {(['active', 'completed'] as PlanStatus[]).map((status) => (
+              <button
+                key={status}
+                type="button"
+                role="tab"
+                aria-selected={planStatus === status}
+                onClick={() => setPlanStatus(status)}
+                className={`flex-1 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${
+                  planStatus === status ? 'bg-white text-text-primary shadow-sm' : 'text-text-secondary hover:text-text-primary'
+                }`}
+              >
+                {t(status)}
+              </button>
+            ))}
+          </div>
+
           {/* Active Goals */}
-          <div className="space-y-3">
+          {planStatus === 'active' && <div className="space-y-3">
             {activeGoals.map((goal) => {
               const percent = Math.min(100, Math.round((goal.current / goal.target) * 100));
               const remaining = Math.max(0, goal.target - goal.current);
@@ -296,15 +315,11 @@ export default function PlanScreen() {
               </div>;
             })}
             {activeGoals.length === 0 && <div className="card-lg p-6 text-center text-sm text-text-secondary">{t('no_goals')}</div>}
-          </div>
+          </div>}
 
           {/* Completed Goals */}
-          {completedGoals.length > 0 && (
-            <div className="mt-4 space-y-3">
-              <h4 className="text-sm font-semibold text-text-secondary flex items-center gap-2">
-                <span className="w-5 h-5 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-xs">✓</span>
-                {t('completed_goals')} ({completedGoals.length})
-              </h4>
+          {planStatus === 'completed' && (
+            <div className="space-y-3">
               {completedGoals.map((goal: Goal) => (
                 <div key={goal.id} className="card-lg p-5 bg-green-50 border border-green-100">
                   <div className="flex items-start justify-between mb-4">
@@ -325,6 +340,7 @@ export default function PlanScreen() {
                   <p className="text-xs font-medium text-green-700">{t('goal_completed')}</p>
                 </div>
               ))}
+              {completedGoals.length === 0 && <div className="card-lg p-6 text-center text-sm text-text-secondary">{t('no_completed_goals')}</div>}
             </div>
           )}
         </div>
@@ -334,8 +350,25 @@ export default function PlanScreen() {
         <div className="mt-6">
           <h3 className="section-title mb-3">{t('budgets')}</h3>
 
+          <div className="mb-5 bg-[#F1F1F3] p-1 rounded-full flex" role="tablist" aria-label={t('budgets')}>
+            {(['active', 'completed'] as PlanStatus[]).map((status) => (
+              <button
+                key={status}
+                type="button"
+                role="tab"
+                aria-selected={planStatus === status}
+                onClick={() => setPlanStatus(status)}
+                className={`flex-1 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${
+                  planStatus === status ? 'bg-white text-text-primary shadow-sm' : 'text-text-secondary hover:text-text-primary'
+                }`}
+              >
+                {t(status)}
+              </button>
+            ))}
+          </div>
+
           {/* Active Budgets */}
-          <div className="grid grid-cols-2 gap-3">
+          {planStatus === 'active' && <><div className="grid grid-cols-2 gap-3">
             {activeBudgets.map((budget) => (
               <div key={budget.id} className="card p-4">
                 <div className="relative mb-3">
@@ -366,16 +399,12 @@ export default function PlanScreen() {
               </div>
             ))}
           </div>
-          {activeBudgets.length === 0 && <div className="card mt-1 p-6 text-center text-sm text-text-secondary">{t('no_budgets')}</div>}
+          {activeBudgets.length === 0 && <div className="card mt-1 p-6 text-center text-sm text-text-secondary">{t('no_budgets')}</div>}</>}
 
           {/* Completed Budgets */}
-          {completedBudgets.length > 0 && (
-            <div className="mt-4">
-              <h4 className="text-sm font-semibold text-text-secondary flex items-center gap-2">
-                <span className="w-5 h-5 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-xs">✓</span>
-                {t('completed_budgets')} ({completedBudgets.length})
-              </h4>
-              <div className="grid grid-cols-2 gap-3 mt-2">
+          {planStatus === 'completed' && (
+            <div>
+              <div className="grid grid-cols-2 gap-3">
                 {completedBudgets.map((budget: Budget) => (
                   <div key={budget.id} className="card p-4 bg-green-50 border border-green-100">
                     <div className="relative mb-3">
@@ -398,6 +427,7 @@ export default function PlanScreen() {
                   </div>
                 ))}
               </div>
+              {completedBudgets.length === 0 && <div className="card mt-1 p-6 text-center text-sm text-text-secondary">{t('no_completed_budgets')}</div>}
             </div>
           )}
         </div>
