@@ -6,6 +6,7 @@ import FabMenu from '../components/ui/FabMenu';
 import BottomSheet from '../components/ui/BottomSheet';
 import { useSettings } from '../contexts/SettingsContext';
 import { useAuth } from '../contexts/AuthContext';
+import { createTransaction } from '../services/api';
 
 type Goal = {
   id: string;
@@ -105,32 +106,47 @@ export default function PlanScreen() {
     setBudgetOpen(false);
   };
 
-  const handleAddMoney = (event: React.FormEvent) => {
+  const handleAddMoney = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!addMoneyTarget) return;
     setAddMoneyError(null);
     const amount = Number(addMoneyAmount);
     if (!Number.isFinite(amount) || amount <= 0) return;
 
-    if (addMoneyTarget.type === 'goal') {
-      setGoals((current) =>
-        current.map((g) => (g.id === addMoneyTarget.id ? { ...g, current: g.current + amount } : g))
-      );
-    } else if (addMoneyTarget.type === 'budget') {
-      setBudgets((current) =>
-        current.map((b) => {
-          if (b.id === addMoneyTarget.id) {
-            const newSpent = b.spent + amount;
-            const newPercent = Math.min(100, Math.round((newSpent / b.total) * 100));
-            return { ...b, spent: newSpent, percent: newPercent };
-          }
-          return b;
-        })
-      );
-    }
+    try {
+      await createTransaction({
+        description: addMoneyTarget.type === 'goal'
+          ? `Goal savings: ${goals.find(g => g.id === addMoneyTarget.id)?.title || 'Goal'}`
+          : `Budget spending: ${budgets.find(b => b.id === addMoneyTarget.id)?.name || 'Budget'}`,
+        amount,
+        type: 'expense',
+        category: 'Other',
+        date: new Date().toISOString(),
+      });
 
-    setAddMoneyAmount('');
-    setAddMoneyTarget(null);
+      if (addMoneyTarget.type === 'goal') {
+        setGoals((current) =>
+          current.map((g) => (g.id === addMoneyTarget.id ? { ...g, current: g.current + amount } : g))
+        );
+      } else if (addMoneyTarget.type === 'budget') {
+        setBudgets((current) =>
+          current.map((b) => {
+            if (b.id === addMoneyTarget.id) {
+              const newSpent = b.spent + amount;
+              const newPercent = Math.min(100, Math.round((newSpent / b.total) * 100));
+              return { ...b, spent: newSpent, percent: newPercent };
+            }
+            return b;
+          })
+        );
+      }
+
+      setAddMoneyAmount('');
+      setAddMoneyTarget(null);
+    } catch (err) {
+      console.error('Add money failed:', err);
+      setAddMoneyError(t('failed_to_save'));
+    }
   };
 
   const openEditGoal = (goal: Goal) => {
