@@ -93,6 +93,10 @@
     background-color: var(--bg-card);
   }
 
+  .dark .bg-app-bg {
+    background-color: var(--bg-app);
+  }
+
   .dark .bg-gray-200,
   .dark .bg-\[\#F1F1F3\],
   .dark .bg-\[\#f3edff\],
