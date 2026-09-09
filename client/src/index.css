@@ -64,7 +64,9 @@
   }
 }
 
-@layer components {
+/* These rules must live in the utilities layer so their dark-theme overrides
+   take precedence over Tailwind's generated colour utilities. */
+@layer utilities {
   .app-shell {
     min-height: 100dvh;
     background-color: var(--bg-app);
@@ -96,6 +98,11 @@
   .dark .bg-\[\#f3edff\],
   .dark .bg-\[\#ebebee\] {
     background-color: var(--bg-secondary);
+  }
+
+  .dark .border-\[\#f0f0f2\],
+  .dark .border-\[\#f2f2f4\] {
+    border-color: var(--border-light);
   }
 
   .dark .bg-\[\#fff0ed\] {
@@ -132,6 +139,14 @@
 
   .dark .bg-brand-soft {
     background-color: #2a1a40;
+  }
+
+  .dark .progress-bar {
+    background-color: var(--bg-secondary);
+  }
+
+  .dark .budget-ring-bg {
+    stroke: var(--bg-secondary);
   }
 
   .dark .text-text-primary { color: var(--text-primary); }
