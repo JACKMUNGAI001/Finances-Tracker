@@ -40,7 +40,7 @@ const categoryLabels: Record<string, string> = {
 
 export default function ReportsScreen() {
   const navigate = useNavigate();
-  const { currency, formatCurrency, t } = useSettings();
+  const { formatCurrency, t } = useSettings();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [activeTab, setActiveTab] = useState<'expenses' | 'income'>('expenses');
   const [loading, setLoading] = useState(true);
@@ -134,12 +134,12 @@ export default function ReportsScreen() {
         callbacks: {
           label: (ctx: { label?: string; parsed?: number }) => {
             const value = ctx.parsed ?? 0;
-            return ` ${currency.symbol} ${value.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+            return ` ${formatCurrency(value)}`;
           },
         },
       },
     },
-  }), [currency.symbol]);
+  }), [formatCurrency]);
 
   const handleAddTransaction = (tx: Transaction) => {
     setTransactions(prev => [tx, ...prev]);
@@ -219,7 +219,7 @@ export default function ReportsScreen() {
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="text-center">
                 <p className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">{t('total')} {activeTab === 'expenses' ? t('expense') : t('income')}</p>
-                <p className="text-base font-extrabold text-text-primary">{currency.symbol} {loading ? '...' : total.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
+                <p className="text-base font-extrabold text-text-primary">{loading ? '...' : formatCurrency(total)}</p>
               </div>
             </div>
           </div>
@@ -244,7 +244,7 @@ export default function ReportsScreen() {
                     <p className="text-xs text-text-secondary">{t('of_total_expenses')}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-bold text-text-primary">{currency.symbol} {cat.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                    <p className="text-sm font-bold text-text-primary">{formatCurrency(cat.amount)}</p>
                     <p className={`text-xs font-medium ${cat.change >= 0 ? 'text-accent-green' : 'text-accent-red'}`}>
                       {cat.change >= 0 ? '+' : ''}{cat.change}{t('vs_last_month')}
                     </p>

@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useCallback, useEffect, useState, type ReactNode } from 'react';
 
 export type Currency = {
   code: string;
@@ -26,13 +26,19 @@ export const currencies: Currency[] = [
 ];
 
 export type Language = 'en' | 'sw';
+const BASE_CURRENCY_CODE = 'KES';
 
 type SettingsContextType = {
   currency: Currency;
   language: Language;
-  setCurrency: (currency: Currency) => void;
+  setCurrency: (currency: Currency) => Promise<boolean>;
   setLanguage: (language: Language) => void;
   formatCurrency: (value: number) => string;
+  fromBaseCurrency: (value: number) => number;
+  toBaseCurrency: (value: number) => number;
+  exchangeRateUpdatedAt: string | null;
+  exchangeRateError: boolean;
+  refreshExchangeRates: () => Promise<Record<string, number> | null>;
   t: (key: string) => string;
 };
 
@@ -181,6 +187,10 @@ const translations: Record<Language, Record<string, string>> = {
     no_expense_data: 'No expense data yet. Add transactions to see your report.',
     of_total_expenses: 'of total expenses',
     currency: 'Currency',
+    refresh_rates: 'Refresh rates',
+    rates_loading: 'Loading the latest exchange rates…',
+    rates_updated: 'Rates updated:',
+    exchange_rate_unavailable: 'Could not refresh rates. Amounts are using the last available rate.',
     language: 'Language',
     date: 'Date',
     of: 'of',
@@ -372,7 +382,11 @@ const translations: Record<Language, Record<string, string>> = {
     purpose: 'Kwa nini',
     no_expense_data: 'Hakuna data ya gharama bado. Ongeza miamala ili kuona ripoti yako.',
     of_total_expenses: 'ya jumla ya matumizi',
-     currency: 'Sarafu',
+    currency: 'Sarafu',
+    refresh_rates: 'Sasisha viwango',
+    rates_loading: 'Inapakia viwango vya kubadilisha fedha…',
+    rates_updated: 'Viwango vimesasishwa:',
+    exchange_rate_unavailable: 'Imeshindwa kusasisha viwango. Kiasi kinatumia kiwango cha mwisho kilichopatikana.',
     language: 'Lugha',
     date: 'Tarehe',
     of: 'ya',
@@ -436,6 +450,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     const saved = localStorage.getItem('language');
     return saved === 'sw' || saved === 'en' ? saved : 'en';
   });
+  const [rates, setRates] = useState<Record<string, number>>({ KES: 1 });
+  const [exchangeRateUpdatedAt, setExchangeRateUpdatedAt] = useState<string | null>(null);
+  const [exchangeRateError, setExchangeRateError] = useState(false);
 
   useEffect(() => {
     localStorage.setItem('currency', currency.code);
@@ -445,18 +462,57 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('language', language);
   }, [language]);
 
-  const setCurrency = (c: Currency) => setCurrencyState(c);
+  const refreshExchangeRates = useCallback(async (): Promise<Record<string, number> | null> => {
+    try {
+      const response = await fetch(`https://open.er-api.com/v6/latest/${BASE_CURRENCY_CODE}`);
+      if (!response.ok) throw new Error('Unable to fetch exchange rates.');
+      const data = await response.json() as { result?: string; rates?: Record<string, number>; conversion_rates?: Record<string, number>; time_last_update_utc?: string };
+      // Open ExchangeRate-API returns `rates`; retain the alternate property
+      // for backwards compatibility with older endpoint responses.
+      const providerRates = data.rates ?? data.conversion_rates;
+      if (data.result !== 'success' || !providerRates) throw new Error('Invalid exchange-rate response.');
+      const updatedRates = { ...providerRates, KES: 1 };
+      setRates(updatedRates);
+      setExchangeRateUpdatedAt(data.time_last_update_utc ?? null);
+      setExchangeRateError(false);
+      return updatedRates;
+    } catch (error) {
+      console.error('Exchange-rate refresh failed:', error);
+      setExchangeRateError(true);
+      return null;
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshExchangeRates();
+  }, [refreshExchangeRates]);
+
+  const setCurrency = async (c: Currency): Promise<boolean> => {
+    if (c.code !== BASE_CURRENCY_CODE && !rates[c.code]) {
+      const updatedRates = await refreshExchangeRates();
+      if (!updatedRates?.[c.code]) return false;
+    } else {
+      void refreshExchangeRates();
+    }
+    setCurrencyState(c);
+    return true;
+  };
   const setLanguage = (l: Language) => setLanguageState(l);
 
-  const formatCurrency = (value: number) =>
-    `${currency.symbol} ${value.toLocaleString(language === 'sw' ? 'en-KE' : undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const getRate = (code: string) => rates[code] ?? 1;
+  const formatCurrency = (value: number) => {
+    const convertedValue = value * getRate(currency.code);
+    return `${currency.symbol} ${convertedValue.toLocaleString(language === 'sw' ? 'en-KE' : undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+  const toBaseCurrency = (value: number) => value / getRate(currency.code);
+  const fromBaseCurrency = (value: number) => value * getRate(currency.code);
 
   const t = (key: string) => {
     return translations[language][key] ?? key;
   };
 
   return (
-    <SettingsContext.Provider value={{ currency, language, setCurrency, setLanguage, formatCurrency, t }}>
+    <SettingsContext.Provider value={{ currency, language, setCurrency, setLanguage, formatCurrency, fromBaseCurrency, toBaseCurrency, exchangeRateUpdatedAt, exchangeRateError, refreshExchangeRates, t }}>
       {children}
     </SettingsContext.Provider>
   );

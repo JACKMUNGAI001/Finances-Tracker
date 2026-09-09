@@ -23,7 +23,7 @@ const categories: { value: TransactionCategory; label: string; icon: string; col
 ];
 
 export default function TransactionSheet({ open, onClose, onSuccess, initialType = 'expense' }: TransactionSheetProps) {
-  const { t } = useSettings();
+  const { t, currency, toBaseCurrency } = useSettings();
   const [type, setType] = useState<TransactionType>(initialType);
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
@@ -65,7 +65,7 @@ export default function TransactionSheet({ open, onClose, onSuccess, initialType
     try {
       const newTransaction = {
         description: description.trim() || 'No description',
-        amount: parsedAmount,
+        amount: toBaseCurrency(parsedAmount),
         type,
         category,
         date: new Date().toISOString(),
@@ -120,7 +120,7 @@ export default function TransactionSheet({ open, onClose, onSuccess, initialType
         <div>
           <label className="block text-sm font-semibold text-text-primary mb-2">Amount</label>
           <div className="relative">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary font-semibold">KSh</span>
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary font-semibold">{currency.symbol}</span>
             <input
               type="number"
               inputMode="decimal"

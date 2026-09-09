@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Transaction, TransactionCategory, TransactionType } from '@shared/types';
 import { createTransaction } from '../services/api';
+import { useSettings } from '../contexts/SettingsContext';
 
 interface Props {
   onAdd: (transaction: Transaction) => void;
@@ -18,6 +19,7 @@ const expenseCategories: TransactionCategory[] = [
 ];
 
 const TransactionForm = ({ onAdd }: Props) => {
+  const { toBaseCurrency } = useSettings();
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [type, setType] = useState<TransactionType>('expense');
@@ -40,7 +42,7 @@ const TransactionForm = ({ onAdd }: Props) => {
     try {
       const newTransaction: Transaction = {
         description: description.trim() || 'No description',
-        amount: parsedAmount,
+        amount: toBaseCurrency(parsedAmount),
         type,
         category: type === 'income' ? 'Salary' : category,
         date: new Date().toISOString(),

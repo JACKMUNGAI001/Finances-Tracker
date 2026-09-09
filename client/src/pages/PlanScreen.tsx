@@ -65,7 +65,7 @@ function mergePlanItems<T extends { id: string }>(remoteItems: T[], localItems: 
 export default function PlanScreen() {
   const { user } = useAuth();
   const storageKey = user ? `plan_${user.email}` : 'plan_guest';
-  const { currency, formatCurrency, t } = useSettings();
+  const { currency, formatCurrency, toBaseCurrency, t } = useSettings();
   const [searchParams] = useSearchParams();
   const createParam = searchParams.get('create');
   const [planTab, setPlanTab] = useState<PlanTab>(createParam === 'budget' ? 'budgets' : 'goals');
@@ -170,7 +170,7 @@ export default function PlanScreen() {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
       title: title.trim(),
       subtitle: 'New savings goal',
-      target: amount,
+      target: toBaseCurrency(amount),
       current: 0,
     };
     setGoals((current) => [...current, newGoal]);
@@ -187,7 +187,7 @@ export default function PlanScreen() {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
       name: title.trim(),
       spent: 0,
-      total: amount,
+      total: toBaseCurrency(amount),
       percent: 0,
       color: '#F59E0B',
       icon: '💳',
@@ -204,13 +204,14 @@ export default function PlanScreen() {
     setAddMoneyError(null);
     const amount = Number(addMoneyAmount);
     if (!Number.isFinite(amount) || amount <= 0) return;
+    const baseAmount = toBaseCurrency(amount);
 
     try {
       await createTransaction({
         description: addMoneyTarget.type === 'goal'
           ? `Goal savings: ${goals.find(g => g.id === addMoneyTarget.id)?.title || 'Goal'}`
           : `Budget spending: ${budgets.find(b => b.id === addMoneyTarget.id)?.name || 'Budget'}`,
-        amount,
+        amount: baseAmount,
         type: 'expense',
         category: 'Other',
         date: new Date().toISOString(),
@@ -218,13 +219,13 @@ export default function PlanScreen() {
 
       if (addMoneyTarget.type === 'goal') {
         setGoals((current) =>
-          current.map((g) => (g.id === addMoneyTarget.id ? { ...g, current: g.current + amount } : g))
+          current.map((g) => (g.id === addMoneyTarget.id ? { ...g, current: g.current + baseAmount } : g))
         );
       } else if (addMoneyTarget.type === 'budget') {
         setBudgets((current) =>
           current.map((b) => {
             if (b.id === addMoneyTarget.id) {
-              const newSpent = b.spent + amount;
+              const newSpent = b.spent + baseAmount;
               const newPercent = Math.min(100, Math.round((newSpent / b.total) * 100));
               return { ...b, spent: newSpent, percent: newPercent };
             }

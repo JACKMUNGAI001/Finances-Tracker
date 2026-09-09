@@ -8,7 +8,7 @@ import BottomSheet from '../components/ui/BottomSheet';
 
 export default function SettingsScreen() {
   const { user, logout } = useAuth();
-  const { currency, language, setCurrency, setLanguage, t } = useSettings();
+  const { currency, language, setCurrency, setLanguage, exchangeRateUpdatedAt, exchangeRateError, refreshExchangeRates, t } = useSettings();
   const navigate = useNavigate();
   const [selectedSetting, setSelectedSetting] = useState<{ label: string; desc: string } | null>(null);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -169,12 +169,23 @@ export default function SettingsScreen() {
           ) : selectedSetting?.label === t('currency_language') ? (
             <>
               <div className="mt-6">
-                <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">{t('currency')}</label>
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider">{t('currency')}</label>
+                  <button onClick={() => void refreshExchangeRates()} className="text-xs font-semibold text-brand hover:text-brand-dark transition-colors">{t('refresh_rates')}</button>
+                </div>
+                <p className="mb-3 text-xs leading-5 text-text-secondary">
+                  {exchangeRateError
+                    ? t('exchange_rate_unavailable')
+                    : exchangeRateUpdatedAt
+                      ? `${t('rates_updated')} ${new Date(exchangeRateUpdatedAt).toLocaleString()}`
+                      : t('rates_loading')}
+                  {' '}<a href="https://www.exchangerate-api.com" target="_blank" rel="noreferrer" className="text-brand underline">ExchangeRate-API</a>
+                </p>
                 <div className="space-y-1 max-h-60 overflow-y-auto pr-1">
                   {currencies.map((c) => (
                     <button
                       key={c.code}
-                      onClick={() => setCurrency(c)}
+                      onClick={() => void setCurrency(c)}
                       className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-left transition-all ${
                         currency.code === c.code
                           ? 'bg-brand-soft border-2 border-brand text-brand'

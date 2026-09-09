@@ -23,7 +23,7 @@ const categories: { value: TransactionCategory; label: string; icon: string; col
 ];
 
 export default function EditTransactionSheet({ open, onClose, onSuccess, transaction }: EditTransactionSheetProps) {
-  const { t } = useSettings();
+  const { t, currency, fromBaseCurrency, toBaseCurrency } = useSettings();
   const [type, setType] = useState<TransactionType>('expense');
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
@@ -34,13 +34,13 @@ export default function EditTransactionSheet({ open, onClose, onSuccess, transac
   useEffect(() => {
     if (open && transaction) {
       setType(transaction.type);
-      setAmount(transaction.amount.toString());
+      setAmount(fromBaseCurrency(transaction.amount).toFixed(2));
       setDescription(transaction.description);
       setCategory(transaction.type === 'income' ? 'Salary' : (transaction.category as TransactionCategory || 'Food'));
       setError(null);
       setLoading(false);
     }
-  }, [open, transaction]);
+  }, [open, transaction, currency.code]);
 
   const handleTypeChange = (newType: TransactionType) => {
     setType(newType);
@@ -66,7 +66,7 @@ export default function EditTransactionSheet({ open, onClose, onSuccess, transac
     try {
       const updated = await updateTransaction(transaction.id, {
         description: description.trim() || 'No description',
-        amount: parsedAmount,
+        amount: toBaseCurrency(parsedAmount),
         type,
         category,
         date: transaction.date,
@@ -119,7 +119,7 @@ export default function EditTransactionSheet({ open, onClose, onSuccess, transac
         <div>
           <label className="block text-sm font-semibold text-text-primary mb-2">Amount</label>
           <div className="relative">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary font-semibold">KSh</span>
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary font-semibold">{currency.symbol}</span>
             <input
               type="number"
               inputMode="decimal"

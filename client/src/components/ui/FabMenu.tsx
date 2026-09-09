@@ -19,7 +19,7 @@ interface FabMenuProps {
 }
 
 export default function FabMenu({ onAddTransaction }: FabMenuProps) {
-  const { t, currency } = useSettings();
+  const { t, currency, toBaseCurrency } = useSettings();
   const navigate = useNavigate();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [sheetMode, setSheetMode] = useState<'expense' | 'income'>('expense');
@@ -105,7 +105,7 @@ export default function FabMenu({ onAddTransaction }: FabMenuProps) {
     try {
       const added = await createTransaction({
         description: `Transfer to ${toAccount}`,
-        amount: parsedAmount,
+        amount: toBaseCurrency(parsedAmount),
         type: 'expense',
         category: 'Other',
         date: new Date().toISOString(),
