@@ -144,7 +144,24 @@ export default function SettingsScreen() {
         <div className="px-5 pb-8">
           <h2 className="text-xl font-bold text-text-primary">{selectedSetting?.label}</h2>
           <p className="mt-1 text-sm text-text-secondary">{selectedSetting?.desc}</p>
-          {selectedSetting?.label === t('notification') ? (
+          {selectedSetting?.label === t('about') ? (
+            <div className="mt-6 space-y-4">
+              <p className="text-sm leading-6 text-text-secondary">{t('about_intro')}</p>
+              {[
+                { icon: '↕️', title: t('about_track_title'), description: t('about_track_desc') },
+                { icon: '🎯', title: t('about_plan_title'), description: t('about_plan_desc') },
+                { icon: '📊', title: t('about_insights_title'), description: t('about_insights_desc') },
+              ].map((feature) => (
+                <div key={feature.title} className="flex gap-3 rounded-2xl bg-gray-50 p-4">
+                  <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-brand-soft text-lg">{feature.icon}</span>
+                  <div>
+                    <h3 className="text-sm font-semibold text-text-primary">{feature.title}</h3>
+                    <p className="mt-0.5 text-xs leading-5 text-text-secondary">{feature.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : selectedSetting?.label === t('notification') ? (
             <button onClick={() => setNotificationsEnabled((enabled) => !enabled)} className="mt-6 flex w-full items-center justify-between rounded-2xl bg-gray-50 p-4 text-left">
               <span><span className="block text-sm font-semibold text-text-primary">{t('push_notifications')}</span><span className="mt-0.5 block text-xs text-text-secondary">{t('notification_desc')}</span></span>
               <span className={`relative h-7 w-12 rounded-full transition-colors ${notificationsEnabled ? 'bg-brand' : 'bg-gray-300'}`}><span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${notificationsEnabled ? 'translate-x-6' : 'translate-x-1'}`} /></span>
