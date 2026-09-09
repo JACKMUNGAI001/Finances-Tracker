@@ -4,6 +4,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { SettingsProvider } from './contexts/SettingsContext'
 import './index.css'
+import HomePage from './pages/HomePage'
 import HomeScreen from './pages/HomeScreen'
 import ProfilePage from './pages/ProfilePage'
 import ReportsScreen from './pages/ReportsScreen'
@@ -32,7 +33,7 @@ function ProtectedRoute({ children }: { children: React.JSX.Element }) {
 const router = createBrowserRouter([
   {
     path: '/',
-    element: <ProtectedRoute><HomeScreen /></ProtectedRoute>
+    element: <HomePage />
   },
   {
     path: '/home',

@@ -7,7 +7,7 @@ export default function BottomNav() {
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-border-light/60 safe-bottom">
       <div className="max-w-md mx-auto flex items-center justify-around px-2 py-2">
         <NavLink
-          to="/"
+          to="/home"
           className={({ isActive }) =>
             `nav-item flex-1 ${isActive ? 'active text-brand' : 'text-text-muted'}`
           }
