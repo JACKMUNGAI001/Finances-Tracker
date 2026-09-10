@@ -3,6 +3,23 @@ import { BiometricAuth } from '@aparajita/capacitor-biometric-auth';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 
 const APP_LOCK_KEY = 'biometric_app_lock_enabled';
+const AUTHENTICATION_TIMEOUT_MS = 15000;
+
+function withTimeout<T>(operation: Promise<T>, message: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timeoutId = window.setTimeout(() => reject(new Error(message)), AUTHENTICATION_TIMEOUT_MS);
+    operation.then(
+      (value) => {
+        window.clearTimeout(timeoutId);
+        resolve(value);
+      },
+      (reason) => {
+        window.clearTimeout(timeoutId);
+        reject(reason);
+      },
+    );
+  });
+}
 
 type AppLockContextType = {
   isNativeApp: boolean;
@@ -24,14 +41,14 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
     setError('');
     setIsAuthenticating(true);
     try {
-      await BiometricAuth.authenticate({
+      await withTimeout(BiometricAuth.authenticate({
         reason: 'Unlock Finances Tracker',
         allowDeviceCredential: true,
         iosFallbackTitle: 'Use device passcode',
         androidTitle: 'Unlock Finances Tracker',
         androidSubtitle: 'Use biometrics or your device PIN',
         androidConfirmationRequired: false,
-      });
+      }), 'The device authentication prompt did not respond.');
       setIsLocked(false);
       return true;
     } catch {
@@ -53,16 +70,6 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
 
   const enableAppLock = async () => {
     if (!isNativeApp) return false;
-    try {
-      const available = await BiometricAuth.checkBiometry();
-      if (!available.isAvailable && !available.deviceIsSecure) {
-        setError('Set up biometrics or a device PIN, pattern, or passcode before enabling app lock.');
-        return false;
-      }
-    } catch {
-      setError('App lock is not available on this device.');
-      return false;
-    }
     const authenticated = await authenticate();
     if (authenticated) {
       localStorage.setItem(APP_LOCK_KEY, 'true');

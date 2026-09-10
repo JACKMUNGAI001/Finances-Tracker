@@ -19,6 +19,7 @@ export default function SettingsScreen() {
   const [exportingData, setExportingData] = useState(false);
   const [exportError, setExportError] = useState('');
   const [appLockError, setAppLockError] = useState('');
+  const [isUpdatingAppLock, setIsUpdatingAppLock] = useState(false);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -59,8 +60,13 @@ export default function SettingsScreen() {
 
   const handleAppLock = async () => {
     setAppLockError('');
-    const changed = isAppLockEnabled ? await disableAppLock() : await enableAppLock();
-    if (!changed) setAppLockError('Unable to update app lock. Set up biometrics or a device passcode and try again.');
+    setIsUpdatingAppLock(true);
+    try {
+      const changed = isAppLockEnabled ? await disableAppLock() : await enableAppLock();
+      if (!changed) setAppLockError('Unable to update app lock. Set up biometrics or a device passcode and try again.');
+    } finally {
+      setIsUpdatingAppLock(false);
+    }
   };
 
   const languageOptions = [
@@ -233,9 +239,9 @@ export default function SettingsScreen() {
               <div className="rounded-2xl bg-gray-50 p-4">
                 <div className="flex items-start justify-between gap-4">
                   <span><span className="block text-sm font-semibold text-text-primary">Biometric or PIN lock</span><span className="mt-1 block text-xs leading-5 text-text-secondary">Require Face ID, fingerprint, or your device PIN whenever the app is reopened.</span></span>
-                  <button type="button" onClick={() => void handleAppLock()} disabled={!isNativeApp} className={`relative mt-0.5 h-7 w-12 flex-shrink-0 rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${isAppLockEnabled ? 'bg-brand' : 'bg-gray-300'}`} aria-label={isAppLockEnabled ? 'Disable app lock' : 'Enable app lock'} aria-pressed={isAppLockEnabled}><span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${isAppLockEnabled ? 'translate-x-6' : 'translate-x-1'}`} /></button>
+                  <button type="button" onClick={() => void handleAppLock()} disabled={!isNativeApp || isUpdatingAppLock} className={`relative mt-0.5 h-7 w-12 flex-shrink-0 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${isAppLockEnabled ? 'bg-brand' : 'bg-gray-300'}`} aria-label={isAppLockEnabled ? 'Disable app lock' : 'Enable app lock'} aria-pressed={isAppLockEnabled}><span className={`absolute left-1 top-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${isAppLockEnabled ? 'translate-x-6' : 'translate-x-0'}`} /></button>
                 </div>
-                <p className="mt-3 text-xs text-text-secondary">{isNativeApp ? (isAppLockEnabled ? 'App lock is enabled.' : 'App lock is off.') : 'Available in the installed Android or iOS app.'}</p>
+                <p className="mt-3 text-xs text-text-secondary">{isUpdatingAppLock ? 'Opening device authentication…' : isNativeApp ? (isAppLockEnabled ? 'App lock is enabled.' : 'App lock is off.') : 'Available in the installed Android or iOS app.'}</p>
                 {appLockError && <p className="mt-2 text-xs text-accent-red">{appLockError}</p>}
               </div>
               <div className="rounded-2xl bg-gray-50 p-4">
