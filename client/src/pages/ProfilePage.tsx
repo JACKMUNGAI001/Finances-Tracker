@@ -14,6 +14,9 @@ export default function ProfilePage() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -154,39 +157,18 @@ export default function ProfilePage() {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-semibold text-text-primary mb-2">{t('current_password')}</label>
-              <input
-                className="input-field"
-                type="password"
-                placeholder="••••••••"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                required
-              />
+              <PasswordInput value={currentPassword} onChange={setCurrentPassword} visible={showCurrentPassword} onToggle={() => setShowCurrentPassword(!showCurrentPassword)} />
             </div>
 
             <div>
               <label className="block text-sm font-semibold text-text-primary mb-2">{t('new_password')}</label>
-              <input
-                className="input-field"
-                type="password"
-                placeholder="••••••••"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                required
-              />
+              <PasswordInput value={newPassword} onChange={setNewPassword} visible={showNewPassword} onToggle={() => setShowNewPassword(!showNewPassword)} />
               <p className="text-[10px] text-text-secondary mt-1">{t('new_password_placeholder')}</p>
             </div>
 
             <div>
               <label className="block text-sm font-semibold text-text-primary mb-2">{t('confirm_password')}</label>
-              <input
-                className="input-field"
-                type="password"
-                placeholder="••••••••"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-              />
+              <PasswordInput value={confirmPassword} onChange={setConfirmPassword} visible={showConfirmPassword} onToggle={() => setShowConfirmPassword(!showConfirmPassword)} />
             </div>
           </div>
 
@@ -208,4 +190,16 @@ export default function ProfilePage() {
       <FabMenu onAddTransaction={() => {}} />
     </div>
   );
+}
+
+function PasswordInput({ value, onChange, visible, onToggle }: { value: string; onChange: (value: string) => void; visible: boolean; onToggle: () => void }) {
+  return <div className="relative"><input className="input-field pr-12" type={visible ? 'text' : 'password'} placeholder="••••••••" value={value} onChange={(e) => onChange(e.target.value)} required /><button type="button" onClick={onToggle} className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-text-secondary hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded-r-[14px]" aria-label={visible ? 'Hide password' : 'Show password'} aria-pressed={visible}>{visible ? <EyeOffIcon /> : <EyeIcon />}</button></div>;
+}
+
+function EyeIcon() {
+  return <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" /><circle cx="12" cy="12" r="3" /></svg>;
+}
+
+function EyeOffIcon() {
+  return <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 3 18 18" /><path d="M10.6 5.2A11.6 11.6 0 0 1 12 5c6.5 0 10 7 10 7a18.1 18.1 0 0 1-3.1 4.1M6.2 6.2C3.5 8.1 2 12 2 12s3.5 7 10 7a10 10 0 0 0 3.1-.5" /><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" /></svg>;
 }

@@ -20,6 +20,8 @@ export default function RegisterPage() {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -117,28 +119,34 @@ export default function RegisterPage() {
 
           <div>
             <label className="block text-sm font-semibold text-text-primary mb-2">Password</label>
-            <input
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-              placeholder="••••••••"
-              className="input-field"
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                required
+                placeholder="••••••••"
+                className="input-field pr-12"
+              />
+              <PasswordVisibilityButton visible={showPassword} onClick={() => setShowPassword(!showPassword)} />
+            </div>
           </div>
 
           <div>
             <label className="block text-sm font-semibold text-text-primary mb-2">Confirm Password</label>
-            <input
-              type="password"
-              name="confirmPassword"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              required
-              placeholder="••••••••"
-              className="input-field"
-            />
+            <div className="relative">
+              <input
+                type={showConfirmPassword ? 'text' : 'password'}
+                name="confirmPassword"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                required
+                placeholder="••••••••"
+                className="input-field pr-12"
+              />
+              <PasswordVisibilityButton visible={showConfirmPassword} onClick={() => setShowConfirmPassword(!showConfirmPassword)} />
+            </div>
           </div>
 
           <button type="submit" disabled={loading} className="btn-primary">
@@ -155,4 +163,20 @@ export default function RegisterPage() {
       </div>
     </div>
   );
+}
+
+function PasswordVisibilityButton({ visible, onClick }: { visible: boolean; onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-text-secondary hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded-r-[14px]" aria-label={visible ? 'Hide password' : 'Show password'} aria-pressed={visible}>
+      {visible ? <EyeOffIcon /> : <EyeIcon />}
+    </button>
+  );
+}
+
+function EyeIcon() {
+  return <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" /><circle cx="12" cy="12" r="3" /></svg>;
+}
+
+function EyeOffIcon() {
+  return <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 3 18 18" /><path d="M10.6 5.2A11.6 11.6 0 0 1 12 5c6.5 0 10 7 10 7a18.1 18.1 0 0 1-3.1 4.1M6.2 6.2C3.5 8.1 2 12 2 12s3.5 7 10 7a10 10 0 0 0 3.1-.5" /><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" /></svg>;
 }
