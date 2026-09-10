@@ -5,6 +5,7 @@ import BottomNav from '../components/BottomNav';
 import { useNavigate } from 'react-router-dom';
 import FabMenu from '../components/ui/FabMenu';
 import BottomSheet from '../components/ui/BottomSheet';
+import { fetchTransactions } from '../services/api';
 
 export default function SettingsScreen() {
   const { user, logout } = useAuth();
@@ -13,6 +14,8 @@ export default function SettingsScreen() {
   const [selectedSetting, setSelectedSetting] = useState<{ label: string; desc: string } | null>(null);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [theme, setTheme] = useState<'light' | 'dark'>(() => localStorage.getItem('theme') === 'dark' ? 'dark' : 'light');
+  const [exportingData, setExportingData] = useState(false);
+  const [exportError, setExportError] = useState('');
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -26,6 +29,29 @@ export default function SettingsScreen() {
 
   const handleNavigateProfile = () => {
     navigate('/profile');
+  };
+
+  const handleExportData = async () => {
+    setExportError('');
+    setExportingData(true);
+    try {
+      const transactions = await fetchTransactions();
+      const exportData = {
+        exportedAt: new Date().toISOString(),
+        transactions,
+      };
+      const file = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+      const downloadUrl = URL.createObjectURL(file);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = `finances-tracker-data-${new Date().toISOString().slice(0, 10)}.json`;
+      link.click();
+      URL.revokeObjectURL(downloadUrl);
+    } catch {
+      setExportError('Your data could not be exported. Please check your connection and try again.');
+    } finally {
+      setExportingData(false);
+    }
   };
 
   const languageOptions = [
@@ -144,7 +170,45 @@ export default function SettingsScreen() {
         <div className="px-5 pb-8">
           <h2 className="text-xl font-bold text-text-primary">{selectedSetting?.label}</h2>
           <p className="mt-1 text-sm text-text-secondary">{selectedSetting?.desc}</p>
-          {selectedSetting?.label === t('about') ? (
+          {selectedSetting?.label === t('help_support') ? (
+            <div className="mt-6 space-y-3">
+              <p className="text-sm leading-6 text-text-secondary">Need help with Finances Tracker? Contact our support team.</p>
+              <a href="tel:+254792856882" className="flex items-center gap-3 rounded-2xl bg-gray-50 p-4 text-left transition-colors hover:bg-brand-soft">
+                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-brand-soft text-lg">📞</span>
+                <span>
+                  <span className="block text-sm font-semibold text-text-primary">Phone</span>
+                  <span className="mt-0.5 block text-xs text-text-secondary">+254 792 856 882</span>
+                </span>
+              </a>
+              <a href="mailto:jacksonmungai001@gmail.com" className="flex items-center gap-3 rounded-2xl bg-gray-50 p-4 text-left transition-colors hover:bg-brand-soft">
+                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-brand-soft text-lg">✉️</span>
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold text-text-primary">Email</span>
+                  <span className="mt-0.5 block truncate text-xs text-text-secondary">jacksonmungai001@gmail.com</span>
+                </span>
+              </a>
+            </div>
+          ) : selectedSetting?.label === t('data_privacy') ? (
+            <div className="mt-6 space-y-4">
+              <div className="rounded-2xl bg-gray-50 p-4">
+                <h3 className="text-sm font-semibold text-text-primary">Your data</h3>
+                <p className="mt-1 text-xs leading-5 text-text-secondary">Your profile, transactions, budgets, goals, and preferences are used to provide your personal finance experience. Your data is associated with your signed-in account.</p>
+              </div>
+              <div className="rounded-2xl bg-gray-50 p-4">
+                <h3 className="text-sm font-semibold text-text-primary">App permissions</h3>
+                <p className="mt-1 text-xs leading-5 text-text-secondary">Notifications are used only for account and finance reminders when enabled. The app does not require access to your contacts or photos.</p>
+              </div>
+              <button type="button" onClick={() => void handleExportData()} disabled={exportingData} className="flex w-full items-center justify-between rounded-2xl bg-brand-soft p-4 text-left transition-colors hover:bg-brand/15 disabled:cursor-not-allowed disabled:opacity-60">
+                <span><span className="block text-sm font-semibold text-brand">Export my transactions</span><span className="mt-0.5 block text-xs text-text-secondary">Download a JSON copy of your transaction data.</span></span>
+                <span className="text-lg">↓</span>
+              </button>
+              {exportError && <p className="text-xs text-accent-red">{exportError}</p>}
+              <a href="mailto:jacksonmungai001@gmail.com?subject=Account%20deletion%20request" className="block rounded-2xl border border-red-100 bg-red-50 p-4 transition-colors hover:bg-red-100">
+                <span className="block text-sm font-semibold text-accent-red">Request account deletion</span>
+                <span className="mt-0.5 block text-xs leading-5 text-text-secondary">Email support to request deletion of your account and associated data.</span>
+              </a>
+            </div>
+          ) : selectedSetting?.label === t('about') ? (
             <div className="mt-6 space-y-4">
               <p className="text-sm leading-6 text-text-secondary">{t('about_intro')}</p>
               {[
