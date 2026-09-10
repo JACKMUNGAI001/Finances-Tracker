@@ -208,6 +208,33 @@ export default function SettingsScreen() {
                 <span className="mt-0.5 block text-xs leading-5 text-text-secondary">Email support to request deletion of your account and associated data.</span>
               </a>
             </div>
+          ) : selectedSetting?.label === t('security') ? (
+            <div className="mt-6 space-y-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedSetting(null);
+                  navigate('/profile');
+                }}
+                className="flex w-full items-center justify-between rounded-2xl bg-gray-50 p-4 text-left transition-colors hover:bg-brand-soft"
+              >
+                <span><span className="block text-sm font-semibold text-text-primary">Change password</span><span className="mt-0.5 block text-xs text-text-secondary">Update your password from your profile.</span></span>
+                <span className="text-text-muted">›</span>
+              </button>
+              <div className="rounded-2xl bg-gray-50 p-4">
+                <h3 className="text-sm font-semibold text-text-primary">Biometric or PIN lock</h3>
+                <p className="mt-1 text-xs leading-5 text-text-secondary">Use your device screen lock to protect access to your phone. Face ID, fingerprint, and app-specific PIN support will be available when native app-lock authentication is enabled.</p>
+              </div>
+              <div className="rounded-2xl bg-gray-50 p-4">
+                <h3 className="text-sm font-semibold text-text-primary">Active session</h3>
+                <p className="mt-1 text-xs leading-5 text-text-secondary">You are signed in on this device as {user?.email || 'your account'}.</p>
+                <button type="button" onClick={() => void handleLogout()} className="mt-3 text-sm font-semibold text-accent-red hover:underline">Log out of this device</button>
+              </div>
+              <div className="rounded-2xl bg-brand-soft p-4">
+                <h3 className="text-sm font-semibold text-text-primary">Keep your account safe</h3>
+                <p className="mt-1 text-xs leading-5 text-text-secondary">Choose a strong, unique password and never share it with anyone. We will never ask you to send your password by email or message.</p>
+              </div>
+            </div>
           ) : selectedSetting?.label === t('about') ? (
             <div className="mt-6 space-y-4">
               <p className="text-sm leading-6 text-text-secondary">{t('about_intro')}</p>
