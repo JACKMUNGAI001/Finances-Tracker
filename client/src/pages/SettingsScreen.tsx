@@ -7,6 +7,7 @@ import FabMenu from '../components/ui/FabMenu';
 import BottomSheet from '../components/ui/BottomSheet';
 import { fetchTransactions } from '../services/api';
 import { useAppLock } from '../contexts/AppLockContext';
+import type { Transaction } from '../shared/types';
 
 export default function SettingsScreen() {
   const { user, logout } = useAuth();
@@ -40,15 +41,11 @@ export default function SettingsScreen() {
     setExportingData(true);
     try {
       const transactions = await fetchTransactions();
-      const exportData = {
-        exportedAt: new Date().toISOString(),
-        transactions,
-      };
-      const file = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+      const file = new Blob([createTransactionReceipt(transactions, user?.email, currency.code)], { type: 'application/pdf' });
       const downloadUrl = URL.createObjectURL(file);
       const link = document.createElement('a');
       link.href = downloadUrl;
-      link.download = `finances-tracker-data-${new Date().toISOString().slice(0, 10)}.json`;
+      link.download = `finances-tracker-transaction-receipt-${new Date().toISOString().slice(0, 10)}.pdf`;
       link.click();
       URL.revokeObjectURL(downloadUrl);
     } catch {
@@ -214,7 +211,7 @@ export default function SettingsScreen() {
                 <p className="mt-1 text-xs leading-5 text-text-secondary">Notifications are used only for account and finance reminders when enabled. The app does not require access to your contacts or photos.</p>
               </div>
               <button type="button" onClick={() => void handleExportData()} disabled={exportingData} className="flex w-full items-center justify-between rounded-2xl bg-brand-soft p-4 text-left transition-colors hover:bg-brand/15 disabled:cursor-not-allowed disabled:opacity-60">
-                <span><span className="block text-sm font-semibold text-brand">Export my transactions</span><span className="mt-0.5 block text-xs text-text-secondary">Download a JSON copy of your transaction data.</span></span>
+                <span><span className="block text-sm font-semibold text-brand">Export my transactions</span><span className="mt-0.5 block text-xs text-text-secondary">Download a receipt-style PDF of your transaction data.</span></span>
                 <span className="text-lg">↓</span>
               </button>
               {exportError && <p className="text-xs text-accent-red">{exportError}</p>}
@@ -354,4 +351,71 @@ export default function SettingsScreen() {
       </BottomSheet>
     </div>
   );
+}
+
+/** Creates a compact, printable receipt-style PDF without sending financial data to another service. */
+function createTransactionReceipt(transactions: Transaction[], email: string | undefined, currencyCode: string): string {
+  const income = transactions.filter((transaction) => transaction.type === 'income').reduce((sum, transaction) => sum + Number(transaction.amount), 0);
+  const expenses = transactions.filter((transaction) => transaction.type === 'expense').reduce((sum, transaction) => sum + Number(transaction.amount), 0);
+  const formatAmount = (amount: number) => `${currencyCode} ${Math.abs(amount).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const formatDate = (date: string) => new Date(date).toLocaleDateString('en-KE', { year: 'numeric', month: 'short', day: 'numeric' });
+  const rows = transactions.flatMap((transaction) => [
+    `${formatDate(transaction.date)} | ${transaction.category} | ${transaction.type === 'income' ? 'INCOME' : 'EXPENSE'}`,
+    `${truncate(transaction.description || 'No description', 28)}  ${transaction.type === 'income' ? '+' : '-'} ${formatAmount(Number(transaction.amount))}`,
+  ]);
+  const summary = [
+    `Account: ${email || 'Signed-in account'}`,
+    `Generated: ${new Date().toLocaleString('en-KE')}`,
+    `Transactions: ${transactions.length}`,
+    `Total income: + ${formatAmount(income)}`,
+    `Total expenses: - ${formatAmount(expenses)}`,
+    `Net balance: ${income - expenses < 0 ? '-' : ''}${formatAmount(income - expenses)}`,
+    '',
+    'DATE | CATEGORY | TYPE',
+    'DESCRIPTION                                         AMOUNT',
+    '------------------------------------------------------------',
+  ];
+  const bodyLines = [...summary, ...(rows.length ? rows : ['No transactions recorded.'])];
+  const linesPerPage = 43;
+  const pages = Array.from({ length: Math.max(1, Math.ceil(bodyLines.length / linesPerPage)) }, (_, index) => bodyLines.slice(index * linesPerPage, (index + 1) * linesPerPage));
+  const pageObjects: string[] = [];
+
+  pages.forEach((lines, index) => {
+    const pageObject = 4 + index * 2;
+    const contentObject = pageObject + 1;
+    const heading = index === 0 ? ['FINANCES TRACKER', 'TRANSACTION RECEIPT', '============================================================', ''] : ['FINANCES TRACKER - TRANSACTION RECEIPT (continued)', '============================================================', ''];
+    const content = pdfTextStream([...heading, ...lines]);
+    pageObjects.push(`${pageObject} 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 420 792] /Resources << /Font << /F1 3 0 R >> >> /Contents ${contentObject} 0 R >>\nendobj`);
+    pageObjects.push(`${contentObject} 0 obj\n<< /Length ${content.length} >>\nstream\n${content}\nendstream\nendobj`);
+  });
+
+  const objects = [
+    '1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj',
+    `2 0 obj\n<< /Type /Pages /Kids [${pages.map((_, index) => `${4 + index * 2} 0 R`).join(' ')}] /Count ${pages.length} >>\nendobj`,
+    '3 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj',
+    ...pageObjects,
+  ];
+  let pdf = '%PDF-1.4\n';
+  const offsets = [0];
+  objects.forEach((object) => {
+    offsets.push(pdf.length);
+    pdf += `${object}\n`;
+  });
+  const xrefOffset = pdf.length;
+  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  offsets.slice(1).forEach((offset) => { pdf += `${String(offset).padStart(10, '0')} 00000 n \n`; });
+  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
+  return pdf;
+}
+
+function pdfTextStream(lines: string[]): string {
+  return `BT\n/F1 9 Tf\n32 760 Td\n${lines.map((line, index) => `${index === 0 ? '' : '0 -15 Td\n'}(${escapePdfText(line)}) Tj`).join('\n')}\nET`;
+}
+
+function escapePdfText(value: string): string {
+  return value.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^\x20-\x7E]/g, '?').replace(/([\\()])/g, '\\$1');
+}
+
+function truncate(value: string, maxLength: number): string {
+  return value.length > maxLength ? `${value.slice(0, maxLength - 3)}...` : value;
 }
