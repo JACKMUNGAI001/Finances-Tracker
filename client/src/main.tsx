@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { SettingsProvider } from './contexts/SettingsContext'
+import { AppLockProvider } from './contexts/AppLockContext'
 import './index.css'
 import HomePage from './pages/HomePage'
 import HomeScreen from './pages/HomeScreen'
@@ -77,7 +78,9 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <AuthProvider>
       <SettingsProvider>
-        <RouterProvider router={router} />
+        <AppLockProvider>
+          <RouterProvider router={router} />
+        </AppLockProvider>
       </SettingsProvider>
     </AuthProvider>
   </StrictMode>,

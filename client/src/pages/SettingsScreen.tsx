@@ -6,9 +6,11 @@ import { useNavigate } from 'react-router-dom';
 import FabMenu from '../components/ui/FabMenu';
 import BottomSheet from '../components/ui/BottomSheet';
 import { fetchTransactions } from '../services/api';
+import { useAppLock } from '../contexts/AppLockContext';
 
 export default function SettingsScreen() {
   const { user, logout } = useAuth();
+  const { isNativeApp, isAppLockEnabled, enableAppLock, disableAppLock } = useAppLock();
   const { currency, language, setCurrency, setLanguage, exchangeRateUpdatedAt, exchangeRateError, refreshExchangeRates, t } = useSettings();
   const navigate = useNavigate();
   const [selectedSetting, setSelectedSetting] = useState<{ label: string; desc: string } | null>(null);
@@ -16,6 +18,7 @@ export default function SettingsScreen() {
   const [theme, setTheme] = useState<'light' | 'dark'>(() => localStorage.getItem('theme') === 'dark' ? 'dark' : 'light');
   const [exportingData, setExportingData] = useState(false);
   const [exportError, setExportError] = useState('');
+  const [appLockError, setAppLockError] = useState('');
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -52,6 +55,12 @@ export default function SettingsScreen() {
     } finally {
       setExportingData(false);
     }
+  };
+
+  const handleAppLock = async () => {
+    setAppLockError('');
+    const changed = isAppLockEnabled ? await disableAppLock() : await enableAppLock();
+    if (!changed) setAppLockError('Unable to update app lock. Set up biometrics or a device passcode and try again.');
   };
 
   const languageOptions = [
@@ -222,8 +231,12 @@ export default function SettingsScreen() {
                 <span className="text-text-muted">›</span>
               </button>
               <div className="rounded-2xl bg-gray-50 p-4">
-                <h3 className="text-sm font-semibold text-text-primary">Biometric or PIN lock</h3>
-                <p className="mt-1 text-xs leading-5 text-text-secondary">Use your device screen lock to protect access to your phone. Face ID, fingerprint, and app-specific PIN support will be available when native app-lock authentication is enabled.</p>
+                <div className="flex items-start justify-between gap-4">
+                  <span><span className="block text-sm font-semibold text-text-primary">Biometric or PIN lock</span><span className="mt-1 block text-xs leading-5 text-text-secondary">Require Face ID, fingerprint, or your device PIN whenever the app is reopened.</span></span>
+                  <button type="button" onClick={() => void handleAppLock()} disabled={!isNativeApp} className={`relative mt-0.5 h-7 w-12 flex-shrink-0 rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${isAppLockEnabled ? 'bg-brand' : 'bg-gray-300'}`} aria-label={isAppLockEnabled ? 'Disable app lock' : 'Enable app lock'} aria-pressed={isAppLockEnabled}><span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${isAppLockEnabled ? 'translate-x-6' : 'translate-x-1'}`} /></button>
+                </div>
+                <p className="mt-3 text-xs text-text-secondary">{isNativeApp ? (isAppLockEnabled ? 'App lock is enabled.' : 'App lock is off.') : 'Available in the installed Android or iOS app.'}</p>
+                {appLockError && <p className="mt-2 text-xs text-accent-red">{appLockError}</p>}
               </div>
               <div className="rounded-2xl bg-gray-50 p-4">
                 <h3 className="text-sm font-semibold text-text-primary">Active session</h3>
