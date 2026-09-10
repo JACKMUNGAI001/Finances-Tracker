@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { Directory, Filesystem } from '@capacitor/filesystem';
 import { useAuth } from '../contexts/AuthContext';
 import { useSettings, currencies } from '../contexts/SettingsContext';
 import BottomNav from '../components/BottomNav';
@@ -19,6 +21,7 @@ export default function SettingsScreen() {
   const [theme, setTheme] = useState<'light' | 'dark'>(() => localStorage.getItem('theme') === 'dark' ? 'dark' : 'light');
   const [exportingData, setExportingData] = useState(false);
   const [exportError, setExportError] = useState('');
+  const [exportSuccess, setExportSuccess] = useState('');
   const [appLockError, setAppLockError] = useState('');
   const [isUpdatingAppLock, setIsUpdatingAppLock] = useState(false);
 
@@ -38,18 +41,36 @@ export default function SettingsScreen() {
 
   const handleExportData = async () => {
     setExportError('');
+    setExportSuccess('');
     setExportingData(true);
     try {
       const transactions = await fetchTransactions();
-      const file = new Blob([createTransactionReceipt(transactions, user?.email, currency.code)], { type: 'application/pdf' });
-      const downloadUrl = URL.createObjectURL(file);
-      const link = document.createElement('a');
-      link.href = downloadUrl;
-      link.download = `finances-tracker-transaction-receipt-${new Date().toISOString().slice(0, 10)}.pdf`;
-      link.click();
-      URL.revokeObjectURL(downloadUrl);
+      const receipt = createTransactionReceipt(transactions, user?.email, currency.code);
+      const fileName = `finances-tracker-transaction-receipt-${new Date().toISOString().slice(0, 10)}.pdf`;
+
+      if (Capacitor.isNativePlatform()) {
+        const isIos = Capacitor.getPlatform() === 'ios';
+        await Filesystem.writeFile({
+          path: isIos ? fileName : `Finances Tracker/${fileName}`,
+          data: btoa(receipt),
+          directory: Directory.Documents,
+          recursive: true,
+        });
+        setExportSuccess(isIos
+          ? `Receipt saved. Find it in Files > On My iPhone > Finances Tracker > ${fileName}`
+          : `Receipt saved. Find it in your Files app under Documents > Finances Tracker > ${fileName}`);
+      } else {
+        const file = new Blob([receipt], { type: 'application/pdf' });
+        const downloadUrl = URL.createObjectURL(file);
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = fileName;
+        link.click();
+        URL.revokeObjectURL(downloadUrl);
+        setExportSuccess('Receipt downloaded successfully. Check your browser Downloads folder.');
+      }
     } catch {
-      setExportError('Your data could not be exported. Please check your connection and try again.');
+      setExportError('Your data could not be exported. Please try again.');
     } finally {
       setExportingData(false);
     }
@@ -211,10 +232,11 @@ export default function SettingsScreen() {
                 <p className="mt-1 text-xs leading-5 text-text-secondary">Notifications are used only for account and finance reminders when enabled. The app does not require access to your contacts or photos.</p>
               </div>
               <button type="button" onClick={() => void handleExportData()} disabled={exportingData} className="flex w-full items-center justify-between rounded-2xl bg-brand-soft p-4 text-left transition-colors hover:bg-brand/15 disabled:cursor-not-allowed disabled:opacity-60">
-                <span><span className="block text-sm font-semibold text-brand">Export my transactions</span><span className="mt-0.5 block text-xs text-text-secondary">Download a receipt-style PDF of your transaction data.</span></span>
+                <span><span className="block text-sm font-semibold text-brand">{exportingData ? 'Creating your receipt…' : 'Export my transactions'}</span><span className="mt-0.5 block text-xs text-text-secondary">Download a receipt-style PDF of your transaction data.</span></span>
                 <span className="text-lg">↓</span>
               </button>
               {exportError && <p className="text-xs text-accent-red">{exportError}</p>}
+              {exportSuccess && <div role="status" className="rounded-2xl border border-green-100 bg-green-50 p-3 text-xs leading-5 text-green-800">✓ {exportSuccess}</div>}
               <a href="mailto:jacksonmungai001@gmail.com?subject=Account%20deletion%20request" className="block rounded-2xl border border-red-100 bg-red-50 p-4 transition-colors hover:bg-red-100">
                 <span className="block text-sm font-semibold text-accent-red">Request account deletion</span>
                 <span className="mt-0.5 block text-xs leading-5 text-text-secondary">Email support to request deletion of your account and associated data.</span>
