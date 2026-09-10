@@ -1,6 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { createBrowserRouter, RouterProvider } from 'react-router-dom'
+import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { SettingsProvider } from './contexts/SettingsContext'
 import { AppLockProvider } from './contexts/AppLockContext'
@@ -27,14 +27,29 @@ if (buildTimestamp && localStorage.getItem('app_build_timestamp') !== buildTimes
 }
 
 function ProtectedRoute({ children }: { children: React.JSX.Element }) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
+  if (isLoading) return <StartupScreen />;
   return isAuthenticated ? children : <LoginPage />;
+}
+
+function PublicRoute({ children }: { children: React.JSX.Element }) {
+  const { isAuthenticated, isLoading } = useAuth();
+  if (isLoading) return <StartupScreen />;
+  return isAuthenticated ? <Navigate to="/home" replace /> : children;
+}
+
+function StartupScreen() {
+  return (
+    <div className="min-h-screen bg-app-bg flex items-center justify-center p-6">
+      <p className="text-sm font-medium text-text-secondary">Opening Finances Tracker…</p>
+    </div>
+  );
 }
 
 const router = createBrowserRouter([
   {
     path: '/',
-    element: <HomePage />
+    element: <PublicRoute><HomePage /></PublicRoute>
   },
   {
     path: '/home',
@@ -66,11 +81,11 @@ const router = createBrowserRouter([
   },
   {
     path: '/login',
-    element: <LoginPage />
+    element: <PublicRoute><LoginPage /></PublicRoute>
   },
   {
     path: '/register',
-    element: <RegisterPage />
+    element: <PublicRoute><RegisterPage /></PublicRoute>
   }
 ])
 

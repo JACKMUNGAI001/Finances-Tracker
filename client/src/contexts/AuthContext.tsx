@@ -9,6 +9,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
+  isLoading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (name: string, email: string, password: string) => Promise<{ needsEmailConfirmation: boolean }>;
   logout: () => Promise<void>;
@@ -20,16 +21,27 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  // Do not decide which screen to show until Supabase has restored the saved
+  // session from this device. Without this, a cold start briefly looks signed
+  // out and sends returning users back to the password form.
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const setSessionUser = (session: { user: { email?: string; user_metadata: { name?: string } } } | null) => {
       setUser(session?.user ? { email: session.user.email ?? '', name: session.user.user_metadata.name } : null);
     };
 
-    supabase.auth.getSession().then(({ data }) => setSessionUser(data.session));
+    supabase.auth.getSession().then(({ data }) => {
+      setSessionUser(data.session);
+      setIsLoading(false);
+    }).catch(() => {
+      setUser(null);
+      setIsLoading(false);
+    });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSessionUser(session);
+      setIsLoading(false);
       if (event === 'SIGNED_OUT') {
         window.location.href = '/login';
       }
@@ -69,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, signIn, signUp, logout, updateProfile, updatePassword }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, signIn, signUp, logout, updateProfile, updatePassword }}>
       {children}
     </AuthContext.Provider>
   );
