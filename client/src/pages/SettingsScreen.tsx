@@ -49,6 +49,9 @@ export default function SettingsScreen() {
       const fileName = `finances-tracker-transaction-receipt-${new Date().toISOString().slice(0, 10)}.pdf`;
 
       if (Capacitor.isNativePlatform()) {
+        if (!Capacitor.isPluginAvailable('Filesystem')) {
+          throw new Error('Exporting files requires the latest app update. Please install the newest version of Finances Tracker and try again.');
+        }
         const isIos = Capacitor.getPlatform() === 'ios';
         await Filesystem.writeFile({
           path: isIos ? fileName : `Finances Tracker/${fileName}`,
@@ -69,8 +72,8 @@ export default function SettingsScreen() {
         URL.revokeObjectURL(downloadUrl);
         setExportSuccess('Receipt downloaded successfully. Check your browser Downloads folder.');
       }
-    } catch {
-      setExportError('Your data could not be exported. Please try again.');
+    } catch (error) {
+      setExportError(error instanceof Error ? error.message : 'Your data could not be exported. Please try again.');
     } finally {
       setExportingData(false);
     }
