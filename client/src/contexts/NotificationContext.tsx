@@ -1,5 +1,5 @@
-import { Capacitor } from '@capacitor/core';
-import { LocalNotifications, Weekday, type LocalNotificationSchema, type PermissionState } from '@capacitor/local-notifications';
+import { Capacitor, type PermissionState } from '@capacitor/core';
+import { LocalNotifications, Weekday, type LocalNotificationSchema } from '@capacitor/local-notifications';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 const NOTIFICATIONS_ENABLED_KEY = 'notifications_enabled';
