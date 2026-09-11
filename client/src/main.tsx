@@ -4,6 +4,7 @@ import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { SettingsProvider } from './contexts/SettingsContext'
 import { AppLockProvider } from './contexts/AppLockContext'
+import { NotificationProvider } from './contexts/NotificationContext'
 import './index.css'
 import HomePage from './pages/HomePage'
 import HomeScreen from './pages/HomeScreen'
@@ -93,9 +94,11 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <AuthProvider>
       <SettingsProvider>
-        <AppLockProvider>
-          <RouterProvider router={router} />
-        </AppLockProvider>
+        <NotificationProvider>
+          <AppLockProvider>
+            <RouterProvider router={router} />
+          </AppLockProvider>
+        </NotificationProvider>
       </SettingsProvider>
     </AuthProvider>
   </StrictMode>,

@@ -9,6 +9,7 @@ import FabMenu from '../components/ui/FabMenu';
 import BottomSheet from '../components/ui/BottomSheet';
 import { fetchTransactions } from '../services/api';
 import { useAppLock } from '../contexts/AppLockContext';
+import { useNotifications } from '../contexts/NotificationContext';
 import type { Transaction } from '../shared/types';
 
 export default function SettingsScreen() {
@@ -17,7 +18,8 @@ export default function SettingsScreen() {
   const { currency, language, setCurrency, setLanguage, exchangeRateUpdatedAt, exchangeRateError, refreshExchangeRates, t } = useSettings();
   const navigate = useNavigate();
   const [selectedSetting, setSelectedSetting] = useState<{ label: string; desc: string } | null>(null);
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const { isNativeApp: notificationsAvailable, isEnabled: notificationsEnabled, permission: notificationPermission, enableNotifications, disableNotifications, sendTestNotification } = useNotifications();
+  const [notificationStatus, setNotificationStatus] = useState('');
   const [theme, setTheme] = useState<'light' | 'dark'>(() => localStorage.getItem('theme') === 'dark' ? 'dark' : 'light');
   const [exportingData, setExportingData] = useState(false);
   const [exportError, setExportError] = useState('');
@@ -88,6 +90,28 @@ export default function SettingsScreen() {
     } finally {
       setIsUpdatingAppLock(false);
     }
+  };
+
+  const handleNotifications = async () => {
+    setNotificationStatus('');
+    try {
+      if (notificationsEnabled) {
+        await disableNotifications();
+        setNotificationStatus('Finance reminders are off.');
+      } else if (await enableNotifications()) {
+        setNotificationStatus('Finance reminders are enabled. A weekly check-in is scheduled for Monday at 9:00 AM.');
+      } else {
+        setNotificationStatus('Notifications are blocked. Enable them for Finances Tracker in your device settings.');
+      }
+    } catch {
+      setNotificationStatus('Unable to update notification permissions. Please try again.');
+    }
+  };
+
+  const handleTestNotification = async () => {
+    setNotificationStatus('');
+    if (await sendTestNotification()) setNotificationStatus('Test notification scheduled. It will appear in a moment.');
+    else setNotificationStatus('Enable notifications first, then try again.');
   };
 
   const languageOptions = [
@@ -232,7 +256,7 @@ export default function SettingsScreen() {
               </div>
               <div className="rounded-2xl bg-gray-50 p-4">
                 <h3 className="text-sm font-semibold text-text-primary">App permissions</h3>
-                <p className="mt-1 text-xs leading-5 text-text-secondary">Notifications are used only for account and finance reminders when enabled. The app does not require access to your contacts or photos.</p>
+                <p className="mt-1 text-xs leading-5 text-text-secondary">Notifications: {notificationPermission === 'granted' ? 'allowed' : notificationPermission === 'unavailable' ? 'available after installing the latest app update' : 'not allowed'}. The app does not require access to your contacts or photos.</p>
               </div>
               <button type="button" onClick={() => void handleExportData()} disabled={exportingData} className="flex w-full items-center justify-between rounded-2xl bg-brand-soft p-4 text-left transition-colors hover:bg-brand/15 disabled:cursor-not-allowed disabled:opacity-60">
                 <span><span className="block text-sm font-semibold text-brand">{exportingData ? 'Creating your receipt…' : 'Export my transactions'}</span><span className="mt-0.5 block text-xs text-text-secondary">Download a receipt-style PDF of your transaction data.</span></span>
@@ -294,10 +318,15 @@ export default function SettingsScreen() {
               ))}
             </div>
           ) : selectedSetting?.label === t('notification') ? (
-            <button onClick={() => setNotificationsEnabled((enabled) => !enabled)} className="mt-6 flex w-full items-center justify-between rounded-2xl bg-gray-50 p-4 text-left">
-              <span><span className="block text-sm font-semibold text-text-primary">{t('push_notifications')}</span><span className="mt-0.5 block text-xs text-text-secondary">{t('notification_desc')}</span></span>
-              <span className={`relative h-7 w-12 rounded-full transition-colors ${notificationsEnabled ? 'bg-brand' : 'bg-gray-300'}`}><span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${notificationsEnabled ? 'translate-x-6' : 'translate-x-1'}`} /></span>
-            </button>
+            <div className="mt-6 space-y-3">
+              <button type="button" onClick={() => void handleNotifications()} disabled={!notificationsAvailable} className="flex w-full items-center justify-between rounded-2xl bg-gray-50 p-4 text-left disabled:cursor-not-allowed disabled:opacity-60">
+                <span><span className="block text-sm font-semibold text-text-primary">{t('push_notifications')}</span><span className="mt-0.5 block text-xs text-text-secondary">Weekly finance reminders on your device.</span></span>
+                <span className={`relative h-7 w-12 rounded-full transition-colors ${notificationsEnabled ? 'bg-brand' : 'bg-gray-300'}`}><span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${notificationsEnabled ? 'translate-x-6' : 'translate-x-1'}`} /></span>
+              </button>
+              <button type="button" onClick={() => void handleTestNotification()} disabled={!notificationsEnabled} className="w-full rounded-2xl bg-brand-soft p-4 text-left text-sm font-semibold text-brand disabled:cursor-not-allowed disabled:opacity-60">Send a test notification</button>
+              {!notificationsAvailable && <p className="text-xs leading-5 text-text-secondary">Install the latest Android or iOS app update to use device notifications.</p>}
+              {notificationStatus && <p role="status" className="text-xs leading-5 text-text-secondary">{notificationStatus}</p>}
+            </div>
           ) : selectedSetting?.label === t('currency_language') ? (
             <>
               <div className="mt-6">

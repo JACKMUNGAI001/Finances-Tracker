@@ -8,6 +8,7 @@ import TransactionDetail from '../components/ui/TransactionDetail';
 import BottomSheet from '../components/ui/BottomSheet';
 import type { Transaction } from '@shared/types';
 import { fetchTransactions, deleteTransaction } from '../services/api';
+import { useNotifications } from '../contexts/NotificationContext';
 
 type Goal = { id: string; title: string; current: number; target: number };
 type Budget = { id: string; name: string; spent: number; total: number };
@@ -35,6 +36,7 @@ const categoryMeta: Record<string, { icon: string; color: string }> = {
 export default function HomeScreen() {
   const { user } = useAuth();
   const { formatCurrency, t } = useSettings();
+  const { notifications, markAllRead } = useNotifications();
   const navigate = useNavigate();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -128,7 +130,7 @@ export default function HomeScreen() {
                 <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
                 <path d="M13.73 21a2 2 0 0 1-3.46 0" />
               </svg>
-              <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full border-2 border-[#9b70f0] bg-[#ff655a]" />
+              {notifications.length > 0 && <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full border-2 border-[#9b70f0] bg-[#ff655a]" />}
             </button>
           </div>
           <div className="relative z-10 mt-7 text-center">
@@ -309,11 +311,14 @@ export default function HomeScreen() {
         <div className="px-5 pb-8">
           {sheet === 'notifications' ? (
             <>
-          <h2 className="text-xl font-bold text-text-primary">{t('notifications')}</h2>
-          <p className="mt-1 text-sm text-text-secondary">{t('keep_up')}</p>
-          <div className="mt-5 space-y-3">
-            <div className="rounded-2xl bg-brand-soft p-4"><p className="text-sm font-semibold text-text-primary">{t('monthly_report')}</p><p className="mt-1 text-xs text-text-secondary">{t('monthly_report_desc')}</p></div>
-            <div className="rounded-2xl bg-gray-50 p-4"><p className="text-sm font-semibold text-text-primary">{t('budget_reminder')}</p><p className="mt-1 text-xs text-text-secondary">{t('budget_reminder_desc')}</p></div>
+              <div className="flex items-start justify-between gap-3">
+                <div><h2 className="text-xl font-bold text-text-primary">{t('notifications')}</h2><p className="mt-1 text-sm text-text-secondary">{t('keep_up')}</p></div>
+                {notifications.length > 0 && <button type="button" onClick={() => void markAllRead()} className="pt-1 text-xs font-semibold text-brand">Mark all read</button>}
+              </div>
+              <div className="mt-5 space-y-3">
+                {notifications.length > 0 ? notifications.map((notification) => (
+                  <div key={notification.id} className="rounded-2xl bg-brand-soft p-4"><p className="text-sm font-semibold text-text-primary">{notification.title}</p><p className="mt-1 text-xs text-text-secondary">{notification.body}</p></div>
+                )) : <div className="rounded-2xl bg-gray-50 p-4 text-center"><p className="text-sm font-semibold text-text-primary">You’re all caught up</p><p className="mt-1 text-xs text-text-secondary">New reminders will appear here after they are delivered.</p></div>}
               </div>
             </>
           ) : (
