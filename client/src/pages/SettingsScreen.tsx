@@ -7,7 +7,7 @@ import BottomNav from '../components/BottomNav';
 import { useNavigate } from 'react-router-dom';
 import FabMenu from '../components/ui/FabMenu';
 import BottomSheet from '../components/ui/BottomSheet';
-import { fetchTransactions, requestAccountDeletion } from '../services/api';
+import { deleteAccount, fetchTransactions } from '../services/api';
 import { useAppLock } from '../contexts/AppLockContext';
 import { useNotifications } from '../contexts/NotificationContext';
 import type { Transaction } from '../shared/types';
@@ -122,8 +122,10 @@ export default function SettingsScreen() {
     setDeletionRequestError('');
     setRequestingDeletion(true);
     try {
-      await requestAccountDeletion(user.email);
-      await logout();
+      await deleteAccount();
+      // The auth user is already gone, so a remote sign-out can legitimately
+      // fail. Clear the local session and continue to the login screen either way.
+      await logout().catch(() => undefined);
       navigate('/login', { replace: true });
     } catch (error) {
       setDeletionRequestError(error instanceof Error ? error.message : 'Unable to submit your deletion request. Please try again.');
@@ -427,10 +429,10 @@ export default function SettingsScreen() {
         <div className="px-5 pb-8">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-50 text-xl">⚠️</div>
           <h2 className="mt-4 text-xl font-bold text-text-primary">Request account deletion?</h2>
-          <p className="mt-2 text-sm leading-6 text-text-secondary">This submits a deletion request for {user?.email}. You will be signed out now. After account ownership is verified, your account and associated transactions, goals, budgets, and preferences will be permanently deleted.</p>
-          <p className="mt-3 text-xs leading-5 text-text-secondary">This cannot be undone once deletion is completed.</p>
+          <p className="mt-2 text-sm leading-6 text-text-secondary">This immediately and permanently deletes {user?.email}, including associated transactions, goals, budgets, and preferences. You will be signed out.</p>
+          <p className="mt-3 text-xs leading-5 text-text-secondary">This cannot be undone.</p>
           {deletionRequestError && <p className="mt-3 text-xs text-accent-red">{deletionRequestError}</p>}
-          <button type="button" onClick={() => void handleDeletionRequest()} disabled={requestingDeletion} className="mt-6 w-full rounded-[14px] bg-accent-red py-3.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60">{requestingDeletion ? 'Submitting request…' : 'Request account deletion'}</button>
+          <button type="button" onClick={() => void handleDeletionRequest()} disabled={requestingDeletion} className="mt-6 w-full rounded-[14px] bg-accent-red py-3.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60">{requestingDeletion ? 'Deleting account…' : 'Permanently delete account'}</button>
           <button type="button" onClick={() => setShowDeletionConfirmation(false)} disabled={requestingDeletion} className="mt-3 w-full py-3 text-sm font-semibold text-text-secondary disabled:opacity-60">Cancel</button>
         </div>
       </BottomSheet>

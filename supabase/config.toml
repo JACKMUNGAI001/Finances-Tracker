@@ -1,0 +1,4 @@
+[functions.delete-account]
+# The function validates the caller's user token itself. This avoids the legacy
+# gateway JWT verifier rejecting projects that use asymmetric signing keys.
+verify_jwt = false
