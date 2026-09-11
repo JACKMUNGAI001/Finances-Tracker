@@ -80,3 +80,18 @@ export async function updateTransaction(
   if (error) throw error;
   return data as Transaction;
 }
+
+export async function requestAccountDeletion(email: string): Promise<void> {
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError) throw authError;
+  if (!user) throw new Error('You must be signed in to request account deletion.');
+
+  const { error } = await supabase.from('account_deletion_requests').insert({
+    user_id: user.id,
+    email,
+  });
+  if (error?.code === '23505') {
+    throw new Error('An account deletion request is already being reviewed.');
+  }
+  if (error) throw error;
+}

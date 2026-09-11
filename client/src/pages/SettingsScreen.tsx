@@ -7,7 +7,7 @@ import BottomNav from '../components/BottomNav';
 import { useNavigate } from 'react-router-dom';
 import FabMenu from '../components/ui/FabMenu';
 import BottomSheet from '../components/ui/BottomSheet';
-import { fetchTransactions } from '../services/api';
+import { fetchTransactions, requestAccountDeletion } from '../services/api';
 import { useAppLock } from '../contexts/AppLockContext';
 import { useNotifications } from '../contexts/NotificationContext';
 import type { Transaction } from '../shared/types';
@@ -26,6 +26,9 @@ export default function SettingsScreen() {
   const [exportSuccess, setExportSuccess] = useState('');
   const [appLockError, setAppLockError] = useState('');
   const [isUpdatingAppLock, setIsUpdatingAppLock] = useState(false);
+  const [showDeletionConfirmation, setShowDeletionConfirmation] = useState(false);
+  const [deletionRequestError, setDeletionRequestError] = useState('');
+  const [requestingDeletion, setRequestingDeletion] = useState(false);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -112,6 +115,21 @@ export default function SettingsScreen() {
     setNotificationStatus('');
     if (await sendTestNotification()) setNotificationStatus('Test notification scheduled. It will appear in a moment.');
     else setNotificationStatus('Enable notifications first, then try again.');
+  };
+
+  const handleDeletionRequest = async () => {
+    if (!user?.email) return;
+    setDeletionRequestError('');
+    setRequestingDeletion(true);
+    try {
+      await requestAccountDeletion(user.email);
+      await logout();
+      navigate('/login', { replace: true });
+    } catch (error) {
+      setDeletionRequestError(error instanceof Error ? error.message : 'Unable to submit your deletion request. Please try again.');
+    } finally {
+      setRequestingDeletion(false);
+    }
   };
 
   const languageOptions = [
@@ -264,10 +282,11 @@ export default function SettingsScreen() {
               </button>
               {exportError && <p className="text-xs text-accent-red">{exportError}</p>}
               {exportSuccess && <div role="status" className="rounded-2xl border border-green-100 bg-green-50 p-3 text-xs leading-5 text-green-800">✓ {exportSuccess}</div>}
-              <a href="mailto:jacksonmungai001@gmail.com?subject=Account%20deletion%20request" className="block rounded-2xl border border-red-100 bg-red-50 p-4 transition-colors hover:bg-red-100">
+              <button type="button" onClick={() => { setDeletionRequestError(''); setShowDeletionConfirmation(true); }} className="block w-full rounded-2xl border border-red-100 bg-red-50 p-4 text-left transition-colors hover:bg-red-100">
                 <span className="block text-sm font-semibold text-accent-red">Request account deletion</span>
-                <span className="mt-0.5 block text-xs leading-5 text-text-secondary">Email support to request deletion of your account and associated data.</span>
-              </a>
+                <span className="mt-0.5 block text-xs leading-5 text-text-secondary">Submit a verified request to permanently delete your account and associated data.</span>
+              </button>
+              {deletionRequestError && <p className="text-xs text-accent-red">{deletionRequestError}</p>}
             </div>
           ) : selectedSetting?.label === t('security') ? (
             <div className="mt-6 space-y-4">
@@ -401,6 +420,18 @@ export default function SettingsScreen() {
           <button onClick={() => setSelectedSetting(null)} className="btn-primary mt-6">
             {t('done')}
           </button>
+        </div>
+      </BottomSheet>
+
+      <BottomSheet open={showDeletionConfirmation} onClose={() => !requestingDeletion && setShowDeletionConfirmation(false)}>
+        <div className="px-5 pb-8">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-50 text-xl">⚠️</div>
+          <h2 className="mt-4 text-xl font-bold text-text-primary">Request account deletion?</h2>
+          <p className="mt-2 text-sm leading-6 text-text-secondary">This submits a deletion request for {user?.email}. You will be signed out now. After account ownership is verified, your account and associated transactions, goals, budgets, and preferences will be permanently deleted.</p>
+          <p className="mt-3 text-xs leading-5 text-text-secondary">This cannot be undone once deletion is completed.</p>
+          {deletionRequestError && <p className="mt-3 text-xs text-accent-red">{deletionRequestError}</p>}
+          <button type="button" onClick={() => void handleDeletionRequest()} disabled={requestingDeletion} className="mt-6 w-full rounded-[14px] bg-accent-red py-3.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60">{requestingDeletion ? 'Submitting request…' : 'Request account deletion'}</button>
+          <button type="button" onClick={() => setShowDeletionConfirmation(false)} disabled={requestingDeletion} className="mt-3 w-full py-3 text-sm font-semibold text-text-secondary disabled:opacity-60">Cancel</button>
         </div>
       </BottomSheet>
     </div>
