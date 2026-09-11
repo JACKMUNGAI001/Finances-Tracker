@@ -1,4 +1,5 @@
 import type { Transaction } from '@shared/types';
+import { FunctionsHttpError } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 
 export type PlanGoal = {
@@ -83,5 +84,9 @@ export async function updateTransaction(
 
 export async function deleteAccount(): Promise<void> {
   const { error } = await supabase.functions.invoke('delete-account', { method: 'POST' });
+  if (error instanceof FunctionsHttpError) {
+    const response = await error.context.json().catch(() => null) as { error?: string } | null;
+    throw new Error(response?.error ?? 'Unable to delete your account. Please try again.');
+  }
   if (error) throw error;
 }
