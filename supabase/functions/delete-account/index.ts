@@ -30,7 +30,8 @@ Deno.serve(async (request) => {
   const adminClient = createClient(supabaseUrl, serviceRoleKey);
   // Retain a minimal audit record before deleting the auth user. The foreign key
   // becomes null after deletion, while the email and completion time remain.
-  const { data: deletionRequest, error: auditError } = await adminClient
+  let deletionRequestId: string | null = null;
+  const { data: newDeletionRequest, error: auditError } = await adminClient
     .from('account_deletion_requests')
     .insert({
       user_id: user.id,
@@ -42,17 +43,32 @@ Deno.serve(async (request) => {
     .select('id')
     .single();
 
-  if (auditError) {
+  if (auditError?.code === '23505') {
+    // A prior attempt may have created the audit row before an infrastructure
+    // error occurred. Reuse it so a confirmed retry can finish deletion.
+    const { data: existingDeletionRequest, error: existingRequestError } = await adminClient
+      .from('account_deletion_requests')
+      .select('id')
+      .eq('user_id', user.id)
+      .in('status', ['pending', 'verified'])
+      .maybeSingle();
+    if (existingRequestError || !existingDeletionRequest) {
+      console.error('Could not recover existing account-deletion audit record:', existingRequestError);
+      return Response.json({ error: 'Unable to start account deletion. Please try again.' }, { status: 500, headers: corsHeaders });
+    }
+    deletionRequestId = existingDeletionRequest.id;
+  } else if (auditError || !newDeletionRequest) {
     console.error('Could not create account-deletion audit record:', auditError);
     return Response.json({ error: 'Unable to start account deletion. Please try again.' }, { status: 500, headers: corsHeaders });
   }
+  deletionRequestId ??= newDeletionRequest!.id;
 
   const { error: deleteError } = await adminClient.auth.admin.deleteUser(user.id);
   if (deleteError) {
     await adminClient
       .from('account_deletion_requests')
       .update({ status: 'cancelled', admin_notes: `Automatic deletion failed: ${deleteError.message}` })
-      .eq('id', deletionRequest.id);
+      .eq('id', deletionRequestId);
     console.error('Could not delete account:', deleteError);
     return Response.json({ error: 'Unable to delete your account. Please try again.' }, { status: 500, headers: corsHeaders });
   }
@@ -60,7 +76,7 @@ Deno.serve(async (request) => {
   await adminClient
     .from('account_deletion_requests')
     .update({ status: 'completed', completed_at: new Date().toISOString() })
-    .eq('id', deletionRequest.id);
+    .eq('id', deletionRequestId);
 
   return Response.json({ deleted: true }, { headers: corsHeaders });
 });
