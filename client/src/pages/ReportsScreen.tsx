@@ -8,9 +8,11 @@ import {
 } from 'chart.js';
 import BottomNav from '../components/BottomNav';
 import FabMenu from '../components/ui/FabMenu';
+import TimeFilter from '../components/TimeFilter';
 import { useSettings } from '../contexts/SettingsContext';
 import { fetchTransactions } from '../services/api';
 import type { Transaction } from '@shared/types';
+import type { FilterState } from '../lib/filterUtils';
 
 ChartJS.register(ArcElement, Tooltip);
 
@@ -43,11 +45,18 @@ export default function ReportsScreen() {
   const { formatCurrency, t } = useSettings();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [activeTab, setActiveTab] = useState<'expenses' | 'income'>('expenses');
+  const [reportFilter, setReportFilter] = useState<FilterState>({ preset: 'all', range: { from: null, to: null } });
   const [loading, setLoading] = useState(true);
 
   const loadTransactions = useCallback(async () => {
     try {
-      const data = await fetchTransactions();
+      const range = reportFilter.preset === 'all'
+        ? undefined
+        : {
+            from: reportFilter.range.from?.toISOString(),
+            to: reportFilter.range.to?.toISOString(),
+          };
+      const data = await fetchTransactions(range);
       setTransactions(data);
     } catch (err) {
       console.error('Failed to load transactions for report:', err);
@@ -55,7 +64,7 @@ export default function ReportsScreen() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [reportFilter]);
 
   useEffect(() => {
     loadTransactions();
@@ -166,12 +175,7 @@ export default function ReportsScreen() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button className="px-3 py-2 rounded-full bg-white shadow-card border border-border-light text-xs font-semibold text-text-secondary flex items-center gap-1.5">
-              {t('august_2026')}
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
-            </button>
+            <TimeFilter value={reportFilter} onChange={setReportFilter} />
             <button className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-card border border-border-light text-text-secondary hover:text-brand transition-colors">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="4" y1="21" x2="4" y2="14" />

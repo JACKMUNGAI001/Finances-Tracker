@@ -51,8 +51,20 @@ export async function saveUserPlan(plan: UserPlan): Promise<void> {
   if (error) throw error;
 }
 
-export async function fetchTransactions(): Promise<Transaction[]> {
-  const { data, error } = await supabase.from('transactions').select('id, description, amount, type, category, date').order('date', { ascending: false });
+export async function fetchTransactions(dateRange?: { from?: string; to?: string }): Promise<Transaction[]> {
+  let query = supabase
+    .from('transactions')
+    .select('id, description, amount, type, category, date')
+    .order('date', { ascending: false });
+
+  if (dateRange?.from) {
+    query = query.gte('date', dateRange.from);
+  }
+  if (dateRange?.to) {
+    query = query.lte('date', dateRange.to);
+  }
+
+  const { data, error } = await query;
   if (error) throw error;
   return (data ?? []) as Transaction[];
 }

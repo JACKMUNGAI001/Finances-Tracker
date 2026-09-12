@@ -4,19 +4,21 @@ import BottomNav from '../components/BottomNav';
 import ProgressRing from '../components/ProgressRing';
 import FabMenu from '../components/ui/FabMenu';
 import BottomSheet from '../components/ui/BottomSheet';
+import TimeFilter from '../components/TimeFilter';
 import { useSettings } from '../contexts/SettingsContext';
 import { useAuth } from '../contexts/AuthContext';
 import { createTransaction, fetchUserPlan, saveUserPlan } from '../services/api';
+import type { FilterState } from '../lib/filterUtils';
+import { filterByDate } from '../lib/filterUtils';
 
-type Goal = {
-  id: string;
-  title: string;
-  subtitle: string;
-  target: number;
-  current: number;
-};
+type Goal = { id: string; title: string; subtitle: string; target: number; current: number; createdAt?: string };
+type Budget = { id: string; name: string; spent: number; total: number; percent: number; color: string; icon: string; createdAt?: string };
 
-type Budget = { id: string; name: string; spent: number; total: number; percent: number; color: string; icon: string };
+const normalizeGoals = (items: Goal[]): Goal[] =>
+  items.map(g => ({ ...g, createdAt: g.createdAt ?? new Date().toISOString() }));
+
+const normalizeBudgets = (items: Budget[]): Budget[] =>
+  items.map(b => ({ ...b, createdAt: b.createdAt ?? new Date().toISOString() }));
 
 type AddMoneyTarget = { type: 'goal'; id: string } | { type: 'budget'; id: string } | null;
 type PlanTab = 'goals' | 'budgets';
@@ -82,14 +84,17 @@ export default function PlanScreen() {
   const [confirmDelete, setConfirmDelete] = useState<AddMoneyTarget>(null);
   const [planLoading, setPlanLoading] = useState(true);
   const [loadedPlanKey, setLoadedPlanKey] = useState<string | null>(null);
+  const [planFilter, setPlanFilter] = useState<FilterState>({ preset: 'all', range: { from: null, to: null } });
 
-  // Split goals into active and completed
-  const activeGoals = useMemo(() => goals.filter(g => g.current < g.target), [goals]);
-  const completedGoals = useMemo(() => goals.filter(g => g.current >= g.target), [goals]);
-  
-  // Split budgets into active and completed
-  const activeBudgets = useMemo(() => budgets.filter(b => b.spent < b.total), [budgets]);
-  const completedBudgets = useMemo(() => budgets.filter(b => b.spent >= b.total), [budgets]);
+  // Filtered goals/budgets by time range
+  const filteredGoals = useMemo(() => filterByDate(goals, planFilter, g => g.createdAt ?? new Date().toISOString()), [goals, planFilter]);
+  const filteredBudgets = useMemo(() => filterByDate(budgets, planFilter, b => b.createdAt ?? new Date().toISOString()), [budgets, planFilter]);
+
+  // Split into active and completed
+  const activeGoals = useMemo(() => filteredGoals.filter(g => g.current < g.target), [filteredGoals]);
+  const completedGoals = useMemo(() => filteredGoals.filter(g => g.current >= g.target), [filteredGoals]);
+  const activeBudgets = useMemo(() => filteredBudgets.filter(b => b.spent < b.total), [filteredBudgets]);
+  const completedBudgets = useMemo(() => filteredBudgets.filter(b => b.spent >= b.total), [filteredBudgets]);
 
   useEffect(() => {
     let active = true;
@@ -100,39 +105,39 @@ export default function PlanScreen() {
     const loadPlan = async () => {
       setPlanLoading(true);
       setLoadedPlanKey(null);
-      if (!user) {
-        if (active) {
-          setGoals(localGoals);
-          setBudgets(localBudgets);
-          setPlanLoading(false);
-          setLoadedPlanKey(storageKey);
-        }
+       if (!user) {
+         if (active) {
+           setGoals(normalizeGoals(localGoals));
+           setBudgets(normalizeBudgets(localBudgets));
+           setPlanLoading(false);
+           setLoadedPlanKey(storageKey);
+         }
         return;
       }
 
-      try {
-        const remotePlan = await fetchUserPlan();
-        const shouldMigrateLocalPlan = !remotePlan || !hasStorageFlag(migrationKey);
-        const mergedPlan = {
-          goals: shouldMigrateLocalPlan
-            ? mergePlanItems(remotePlan?.goals ?? [], localGoals)
-            : remotePlan.goals,
-          budgets: shouldMigrateLocalPlan
-            ? mergePlanItems(remotePlan?.budgets ?? [], localBudgets)
-            : remotePlan.budgets,
-        };
-        await saveUserPlan(mergedPlan);
-        setStorageFlag(migrationKey);
-        if (active) {
-          setGoals(mergedPlan.goals);
-          setBudgets(mergedPlan.budgets);
-        }
-      } catch (error) {
-        console.error('Plan sync failed:', error);
-        if (active) {
-          setGoals(localGoals);
-          setBudgets(localBudgets);
-        }
+       try {
+         const remotePlan = await fetchUserPlan();
+         const shouldMigrateLocalPlan = !remotePlan || !hasStorageFlag(migrationKey);
+         const mergedPlan = {
+           goals: shouldMigrateLocalPlan
+             ? mergePlanItems(remotePlan?.goals ?? [], localGoals)
+             : remotePlan.goals,
+           budgets: shouldMigrateLocalPlan
+             ? mergePlanItems(remotePlan?.budgets ?? [], localBudgets)
+             : remotePlan.budgets,
+         };
+         await saveUserPlan(mergedPlan);
+         setStorageFlag(migrationKey);
+         if (active) {
+           setGoals(normalizeGoals(mergedPlan.goals));
+           setBudgets(normalizeBudgets(mergedPlan.budgets));
+         }
+       } catch (error) {
+         console.error('Plan sync failed:', error);
+         if (active) {
+           setGoals(normalizeGoals(localGoals));
+           setBudgets(normalizeBudgets(localBudgets));
+         }
       } finally {
         if (active) {
           setPlanLoading(false);
@@ -172,6 +177,7 @@ export default function PlanScreen() {
       subtitle: 'New savings goal',
       target: toBaseCurrency(amount),
       current: 0,
+      createdAt: new Date().toISOString(),
     };
     setGoals((current) => [...current, newGoal]);
     setTitle('');
@@ -191,6 +197,7 @@ export default function PlanScreen() {
       percent: 0,
       color: '#F59E0B',
       icon: '💳',
+      createdAt: new Date().toISOString(),
     };
     setBudgets((current) => [...current, newBudget]);
     setTitle('');
@@ -274,12 +281,13 @@ export default function PlanScreen() {
     <div className="app-shell">
       <div className="app-container">
         {/* Header */}
-        <div className="flex items-center justify-between pt-4 pb-2">
+        <div className="flex items-center justify-between pt-4 pb-4">
           <div>
             <p className="text-xs text-text-secondary font-medium">{t('finance')}</p>
             <h1 className="text-[24px] font-bold text-text-primary tracking-tight">{t('my_plan')}</h1>
           </div>
           <div className="flex items-center gap-2">
+            <TimeFilter value={planFilter} onChange={setPlanFilter} />
             <button
               onClick={() => {
                 setTitle('');

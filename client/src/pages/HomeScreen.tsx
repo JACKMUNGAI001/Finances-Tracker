@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useSettings } from '../contexts/SettingsContext';
@@ -6,7 +6,9 @@ import BottomNav from '../components/BottomNav';
 import FabMenu from '../components/ui/FabMenu';
 import TransactionDetail from '../components/ui/TransactionDetail';
 import BottomSheet from '../components/ui/BottomSheet';
+import TimeFilter from '../components/TimeFilter';
 import type { Transaction } from '@shared/types';
+import type { FilterState } from '../lib/filterUtils';
 import { fetchTransactions, deleteTransaction } from '../services/api';
 import { useNotifications } from '../contexts/NotificationContext';
 
@@ -40,24 +42,32 @@ export default function HomeScreen() {
   const navigate = useNavigate();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [transactionFilter, setTransactionFilter] = useState<FilterState>({ preset: 'all', range: { from: null, to: null } });
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
   const [sheet, setSheet] = useState<'notifications' | 'month' | null>(null);
   const [selectedMonth, setSelectedMonth] = useState('September 2026');
 
-  const loadTransactions = async () => {
+  const loadTransactions = useCallback(async () => {
     try {
-      const data = await fetchTransactions();
+      setLoading(true);
+      const range = transactionFilter.preset === 'all'
+        ? undefined
+        : {
+            from: transactionFilter.range.from?.toISOString(),
+            to: transactionFilter.range.to?.toISOString(),
+          };
+      const data = await fetchTransactions(range);
       setTransactions(data);
     } catch {
       setTransactions([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [transactionFilter]);
 
   useEffect(() => {
     loadTransactions();
-  }, []);
+  }, [loadTransactions]);
 
   const totals = useMemo(() => {
     return transactions.reduce(
@@ -107,7 +117,7 @@ export default function HomeScreen() {
     <div className="app-shell">
       <div className="app-container pt-3">
         {/* Balance hero */}
-        <section className="relative overflow-hidden rounded-[30px] bg-gradient-to-br from-[#8c61ed] via-[#8b5cf6] to-[#c4adff] px-5 pb-20 pt-5 text-white shadow-[0_18px_36px_rgba(124,58,237,0.24)]">
+         <section className="relative overflow-hidden rounded-[30px] bg-header-gradient px-5 pb-20 pt-5 text-white shadow-[0_18px_36px_rgba(124,58,237,0.24)]">
           <div className="absolute -right-14 top-20 h-48 w-48 rounded-full bg-white/10" />
           <div className="absolute -bottom-14 left-16 h-36 w-64 -rotate-12 rounded-[44px] bg-white/10" />
           <div className="absolute inset-0 bg-[linear-gradient(132deg,transparent_37%,rgba(255,255,255,.11)_37%,rgba(255,255,255,.05)_60%,transparent_60%)]" />
@@ -232,14 +242,17 @@ export default function HomeScreen() {
 
         {/* Transactions Section */}
         <div className="mt-5 px-1">
-          <div className="flex items-center justify-between mb-3">
-             <h3 className="text-[13px] font-bold text-text-primary">{t('transactions')}</h3>
-             <button
-               onClick={() => navigate('/transactions')}
-               className="rounded-full bg-[#f3edff] px-2.5 py-1 text-[9px] font-semibold text-brand hover:text-brand-dark transition-colors"
-             >
-               {t('see_all')}
-            </button>
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="text-[13px] font-bold text-text-primary">{t('transactions')}</h3>
+            <div className="flex items-center gap-2">
+              <TimeFilter value={transactionFilter} onChange={setTransactionFilter} />
+              <button
+                onClick={() => navigate('/transactions')}
+                className="rounded-full bg-[#f3edff] px-2.5 py-1 text-[9px] font-semibold text-brand hover:text-brand-dark transition-colors"
+              >
+                {t('see_all')}
+              </button>
+            </div>
           </div>
 
           {loading ? (

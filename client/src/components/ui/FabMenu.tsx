@@ -124,7 +124,7 @@ export default function FabMenu({ onAddTransaction }: FabMenuProps) {
       <div className="mobile-fab fixed left-1/2 -translate-x-1/2 z-[60]">
         <button
           onClick={() => setMenuOpen(!menuOpen)}
-          className={`nav-fab transition-transform duration-300 ${menuOpen ? 'rotate-45' : ''}`}
+          className={`nav-fab bg-header-gradient transition-transform duration-300 ${menuOpen ? 'rotate-45' : ''}`}
           aria-label={t('add_transaction')}
         >
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

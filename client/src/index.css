@@ -417,6 +417,10 @@
   .safe-bottom {
     padding-bottom: env(safe-area-inset-bottom, 16px);
   }
+
+  .bg-header-gradient {
+    background: linear-gradient(145deg, #B689F1 0%, #9C6ADE 100%);
+  }
 }
 
 @keyframes shimmer {
