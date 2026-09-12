@@ -15,10 +15,10 @@ type Goal = { id: string; title: string; subtitle: string; target: number; curre
 type Budget = { id: string; name: string; spent: number; total: number; percent: number; color: string; icon: string; createdAt?: string };
 
 const normalizeGoals = (items: Goal[]): Goal[] =>
-  items.map(g => ({ ...g, createdAt: g.createdAt ?? new Date().toISOString() }));
+  items.map(g => ({ ...g, createdAt: g.createdAt ?? '1970-01-01T00:00:00.000Z' }));
 
 const normalizeBudgets = (items: Budget[]): Budget[] =>
-  items.map(b => ({ ...b, createdAt: b.createdAt ?? new Date().toISOString() }));
+  items.map(b => ({ ...b, createdAt: b.createdAt ?? '1970-01-01T00:00:00.000Z' }));
 
 type AddMoneyTarget = { type: 'goal'; id: string } | { type: 'budget'; id: string } | null;
 type PlanTab = 'goals' | 'budgets';
@@ -56,12 +56,22 @@ function setStorageFlag(key: string): void {
   }
 }
 
-function mergePlanItems<T extends { id: string }>(remoteItems: T[], localItems: T[]): T[] {
-  const merged = new Map(remoteItems.map((item) => [item.id, item]));
-  localItems.forEach((item) => {
-    if (!merged.has(item.id)) merged.set(item.id, item);
+function mergePlanItems<T extends { id: string; createdAt?: string }>(remoteItems: T[], localItems: T[]): T[] {
+  const localById = new Map(localItems.map((item) => [item.id, item]));
+  const remoteIds = new Set(remoteItems.map((item) => item.id));
+
+  const merged = remoteItems.map((remote) => {
+    const local = localById.get(remote.id);
+    if (local && !remote.createdAt) {
+      return { ...remote, createdAt: local.createdAt };
+    }
+    return remote;
   });
-  return [...merged.values()];
+
+  for (const item of localItems) {
+    if (!remoteIds.has(item.id)) merged.push(item);
+  }
+  return merged;
 }
 
 export default function PlanScreen() {

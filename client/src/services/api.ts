@@ -8,6 +8,7 @@ export type PlanGoal = {
   subtitle: string;
   target: number;
   current: number;
+  createdAt?: string;
 };
 
 export type PlanBudget = {
@@ -18,6 +19,7 @@ export type PlanBudget = {
   percent: number;
   color: string;
   icon: string;
+  createdAt?: string;
 };
 
 export type UserPlan = { goals: PlanGoal[]; budgets: PlanBudget[] };
