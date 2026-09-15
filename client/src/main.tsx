@@ -11,6 +11,7 @@ import HomeScreen from './pages/HomeScreen'
 import ProfilePage from './pages/ProfilePage'
 import ReportsScreen from './pages/ReportsScreen'
 import PlanScreen from './pages/PlanScreen'
+import DebtsScreen from './pages/DebtsScreen'
 import SettingsScreen from './pages/SettingsScreen'
 import TransactionsPage from './pages/TransactionsPage'
 import LoginPage from './pages/LoginPage'
@@ -67,6 +68,10 @@ const router = createBrowserRouter([
   {
     path: '/plan',
     element: <ProtectedRoute><PlanScreen /></ProtectedRoute>
+  },
+  {
+    path: '/debts',
+    element: <ProtectedRoute><DebtsScreen /></ProtectedRoute>
   },
   {
     path: '/transactions',

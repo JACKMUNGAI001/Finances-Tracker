@@ -47,6 +47,20 @@ export default function BottomNav() {
         </NavLink>
 
         <NavLink
+          to="/debts"
+          className={({ isActive }) =>
+            `nav-item flex-1 ${isActive ? 'active text-accent-red' : 'text-text-muted'}`
+          }
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 6h18" />
+            <path d="M3 12h18" />
+            <path d="M3 18h18" />
+          </svg>
+          <span className="text-[10px] font-semibold">{t('nav_debts')}</span>
+        </NavLink>
+
+        <NavLink
           to="/settings"
           className={({ isActive }) =>
             `nav-item flex-1 ${isActive ? 'active text-brand' : 'text-text-muted'}`

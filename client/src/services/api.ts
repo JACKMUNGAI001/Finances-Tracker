@@ -1,4 +1,4 @@
-import type { Transaction } from '@shared/types';
+import type { Transaction, Debt } from '@shared/types';
 import { FunctionsHttpError } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 
@@ -102,5 +102,93 @@ export async function deleteAccount(): Promise<void> {
     const response = await error.context.json().catch(() => null) as { error?: string } | null;
     throw new Error(response?.error ?? 'Unable to delete your account. Please try again.');
   }
+  if (error) throw error;
+}
+
+export async function fetchDebts(): Promise<Debt[]> {
+  const { data, error } = await supabase
+    .from('debts')
+    .select('id, name, amount, type, person, due_date, description, status, created_at, updated_at')
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map(row => ({
+    id: row.id,
+    name: row.name,
+    amount: Number(row.amount),
+    type: row.type as Debt['type'],
+    person: row.person,
+    dueDate: row.due_date,
+    description: row.description,
+    status: row.status as Debt['status'],
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  })) as Debt[];
+}
+
+export async function createDebt(debt: Omit<Debt, 'id'>): Promise<Debt> {
+  const { data, error } = await supabase
+    .from('debts')
+    .insert({
+      name: debt.name,
+      amount: debt.amount,
+      type: debt.type,
+      person: debt.person,
+      due_date: debt.dueDate,
+      description: debt.description,
+      status: debt.status,
+      created_at: debt.createdAt,
+      updated_at: debt.updatedAt,
+    })
+    .select('id, name, amount, type, person, due_date, description, status, created_at, updated_at')
+    .single();
+  if (error) throw error;
+  return {
+    id: data.id,
+    name: data.name,
+    amount: Number(data.amount),
+    type: data.type as Debt['type'],
+    person: data.person,
+    dueDate: data.due_date,
+    description: data.description,
+    status: data.status as Debt['status'],
+    createdAt: data.created_at,
+    updatedAt: data.updated_at,
+  } as Debt;
+}
+
+export async function updateDebt(id: string | number, updates: Partial<Omit<Debt, 'id'>>): Promise<Debt> {
+  const { data, error } = await supabase
+    .from('debts')
+    .update({
+      ...('name' in updates && { name: updates.name }),
+      ...('amount' in updates && { amount: updates.amount }),
+      ...('type' in updates && { type: updates.type }),
+      ...('person' in updates && { person: updates.person }),
+      ...('dueDate' in updates && { due_date: updates.dueDate }),
+      ...('description' in updates && { description: updates.description }),
+      ...('status' in updates && { status: updates.status }),
+      ...('createdAt' in updates && { created_at: updates.createdAt }),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id)
+    .select('id, name, amount, type, person, due_date, description, status, created_at, updated_at')
+    .single();
+  if (error) throw error;
+  return {
+    id: data.id,
+    name: data.name,
+    amount: Number(data.amount),
+    type: data.type as Debt['type'],
+    person: data.person,
+    dueDate: data.due_date,
+    description: data.description,
+    status: data.status as Debt['status'],
+    createdAt: data.created_at,
+    updatedAt: data.updated_at,
+  } as Debt;
+}
+
+export async function deleteDebt(id: string | number): Promise<void> {
+  const { error } = await supabase.from('debts').delete().eq('id', id);
   if (error) throw error;
 }

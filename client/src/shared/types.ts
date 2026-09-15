@@ -19,3 +19,19 @@ export interface Transaction {
   category: TransactionCategory;
   date: string; // ISO string
 }
+
+export type DebtType = 'owed' | 'lent';
+export type DebtStatus = 'pending' | 'paid';
+
+export interface Debt {
+  id?: string | number;
+  name: string;
+  amount: number;
+  type: DebtType;
+  person: string;
+  dueDate?: string;
+  description?: string;
+  status: DebtStatus;
+  createdAt: string;
+  updatedAt: string;
+}

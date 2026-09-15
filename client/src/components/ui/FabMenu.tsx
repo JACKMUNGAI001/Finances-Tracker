@@ -121,7 +121,7 @@ export default function FabMenu({ onAddTransaction }: FabMenuProps) {
   return (
     <>
       {/* FAB Button */}
-      <div className="mobile-fab fixed left-1/2 -translate-x-1/2 z-[60]">
+      <div className="mobile-fab fixed z-[60]">
         <button
           onClick={() => setMenuOpen(!menuOpen)}
           className={`nav-fab bg-header-gradient transition-transform duration-300 ${menuOpen ? 'rotate-45' : ''}`}
@@ -138,7 +138,7 @@ export default function FabMenu({ onAddTransaction }: FabMenuProps) {
       {menuOpen && (
         <>
           <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[55]" onClick={() => setMenuOpen(false)} />
-          <div className="fab-menu fixed left-1/2 -translate-x-1/2 z-[60] w-[calc(100%-32px)] max-w-sm">
+          <div className="fab-menu fixed z-[60] w-64 max-w-[calc(100%-32px)]">
             <div className="bg-white rounded-[24px] shadow-2xl border border-border-light/60 p-3 animate-slide-up">
               {actions.map((action) => (
                 <button
