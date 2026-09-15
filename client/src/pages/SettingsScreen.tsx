@@ -14,11 +14,11 @@ import type { Transaction } from '../shared/types';
 
 export default function SettingsScreen() {
   const { user, logout } = useAuth();
-  const { isNativeApp, isAppLockEnabled, enableAppLock, disableAppLock } = useAppLock();
+  const { isNativeApp: isNativePlatform, isAppLockEnabled, enableAppLock, disableAppLock } = useAppLock();
   const { currency, language, setCurrency, setLanguage, exchangeRateUpdatedAt, exchangeRateError, refreshExchangeRates, t } = useSettings();
   const navigate = useNavigate();
   const [selectedSetting, setSelectedSetting] = useState<{ label: string; desc: string } | null>(null);
-  const { isNativeApp: notificationsAvailable, isEnabled: notificationsEnabled, permission: notificationPermission, enableNotifications, disableNotifications, sendTestNotification } = useNotifications();
+  const { isNativeApp, isEnabled: notificationsEnabled, permission: notificationPermission, isWebNotificationAvailable, enableNotifications, disableNotifications, sendTestNotification } = useNotifications();
   const [notificationStatus, setNotificationStatus] = useState('');
   const [theme, setTheme] = useState<'light' | 'dark'>(() => localStorage.getItem('theme') === 'dark' ? 'dark' : 'light');
   const [exportingData, setExportingData] = useState(false);
@@ -102,9 +102,13 @@ export default function SettingsScreen() {
         await disableNotifications();
         setNotificationStatus('Finance reminders are off.');
       } else if (await enableNotifications()) {
-        setNotificationStatus('Finance reminders are enabled. A weekly check-in is scheduled for Monday at 9:00 AM.');
+        setNotificationStatus(isNativeApp 
+          ? 'Finance reminders are enabled. A weekly check-in is scheduled for Monday at 9:00 AM.'
+          : 'Finance reminders are enabled. A test notification will appear when you use "Send a test notification".');
       } else {
-        setNotificationStatus('Notifications are blocked. Enable them for Finances Tracker in your device settings.');
+        setNotificationStatus(isNativeApp
+          ? 'Notifications are blocked. Enable them for Finances Tracker in your device settings.'
+          : 'Notifications are blocked. Please allow notifications in your browser settings.');
       }
     } catch {
       setNotificationStatus('Unable to update notification permissions. Please try again.');
@@ -276,7 +280,7 @@ export default function SettingsScreen() {
               </div>
               <div className="rounded-2xl bg-gray-50 p-4">
                 <h3 className="text-sm font-semibold text-text-primary">App permissions</h3>
-                <p className="mt-1 text-xs leading-5 text-text-secondary">Notifications: {notificationPermission === 'granted' ? 'allowed' : notificationPermission === 'unavailable' ? 'available after installing the latest app update' : 'not allowed'}. The app does not require access to your contacts or photos.</p>
+                <p className="mt-1 text-xs leading-5 text-text-secondary">Notifications: {notificationPermission === 'granted' ? 'allowed' : notificationPermission === 'unavailable' && !isWebNotificationAvailable ? 'available after installing the latest app update' : notificationPermission === 'default' ? 'not requested yet' : 'not allowed'}. The app does not require access to your contacts or photos.</p>
               </div>
               <button type="button" onClick={() => void handleExportData()} disabled={exportingData} className="flex w-full items-center justify-between rounded-2xl bg-brand-soft p-4 text-left transition-colors hover:bg-brand/15 disabled:cursor-not-allowed disabled:opacity-60">
                 <span><span className="block text-sm font-semibold text-brand">{exportingData ? 'Creating your receipt…' : 'Export my transactions'}</span><span className="mt-0.5 block text-xs text-text-secondary">Download a receipt-style PDF of your transaction data.</span></span>
@@ -306,9 +310,9 @@ export default function SettingsScreen() {
               <div className="rounded-2xl bg-gray-50 p-4">
                 <div className="flex items-start justify-between gap-4">
                   <span><span className="block text-sm font-semibold text-text-primary">Biometric or PIN lock</span><span className="mt-1 block text-xs leading-5 text-text-secondary">Require Face ID, fingerprint, or your device PIN whenever the app is reopened.</span></span>
-                  <button type="button" onClick={() => void handleAppLock()} disabled={!isNativeApp || isUpdatingAppLock} className={`relative mt-0.5 h-7 w-12 flex-shrink-0 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${isAppLockEnabled ? 'bg-brand' : 'bg-gray-300'}`} aria-label={isAppLockEnabled ? 'Disable app lock' : 'Enable app lock'} aria-pressed={isAppLockEnabled}><span className={`absolute left-1 top-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${isAppLockEnabled ? 'translate-x-6' : 'translate-x-0'}`} /></button>
+                  <button type="button" onClick={() => void handleAppLock()} disabled={!isNativePlatform || isUpdatingAppLock} className={`relative mt-0.5 h-7 w-12 flex-shrink-0 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${isAppLockEnabled ? 'bg-brand' : 'bg-gray-300'}`} aria-label={isAppLockEnabled ? 'Disable app lock' : 'Enable app lock'} aria-pressed={isAppLockEnabled}><span className={`absolute left-1 top-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${isAppLockEnabled ? 'translate-x-6' : 'translate-x-0'}`} /></button>
                 </div>
-                <p className="mt-3 text-xs text-text-secondary">{isUpdatingAppLock ? 'Opening device authentication…' : isNativeApp ? (isAppLockEnabled ? 'App lock is enabled.' : 'App lock is off.') : 'Available in the installed Android or iOS app.'}</p>
+                <p className="mt-3 text-xs text-text-secondary">{isUpdatingAppLock ? 'Opening device authentication…' : isNativePlatform ? (isAppLockEnabled ? 'App lock is enabled.' : 'App lock is off.') : 'Available in the installed Android or iOS app.'}</p>
                 {appLockError && <p className="mt-2 text-xs text-accent-red">{appLockError}</p>}
               </div>
               <div className="rounded-2xl bg-gray-50 p-4">
@@ -340,12 +344,12 @@ export default function SettingsScreen() {
             </div>
           ) : selectedSetting?.label === t('notification') ? (
             <div className="mt-6 space-y-3">
-              <button type="button" onClick={() => void handleNotifications()} disabled={!notificationsAvailable} className="flex w-full items-center justify-between rounded-2xl bg-gray-50 p-4 text-left disabled:cursor-not-allowed disabled:opacity-60">
+              <button type="button" onClick={() => void handleNotifications()} disabled={!isNativeApp && !isWebNotificationAvailable} className="flex w-full items-center justify-between rounded-2xl bg-gray-50 p-4 text-left disabled:cursor-not-allowed disabled:opacity-60">
                 <span><span className="block text-sm font-semibold text-text-primary">{t('push_notifications')}</span><span className="mt-0.5 block text-xs text-text-secondary">Weekly finance reminders on your device.</span></span>
                 <span className={`relative h-7 w-12 rounded-full transition-colors ${notificationsEnabled ? 'bg-brand' : 'bg-gray-300'}`}><span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${notificationsEnabled ? 'translate-x-6' : 'translate-x-1'}`} /></span>
               </button>
               <button type="button" onClick={() => void handleTestNotification()} disabled={!notificationsEnabled} className="w-full rounded-2xl bg-brand-soft p-4 text-left text-sm font-semibold text-brand disabled:cursor-not-allowed disabled:opacity-60">Send a test notification</button>
-              {!notificationsAvailable && <p className="text-xs leading-5 text-text-secondary">Install the latest Android or iOS app update to use device notifications.</p>}
+              {!isNativeApp && !isWebNotificationAvailable && <p className="text-xs leading-5 text-text-secondary">Install the latest Android or iOS app update to use device notifications.</p>}
               {notificationStatus && <p role="status" className="text-xs leading-5 text-text-secondary">{notificationStatus}</p>}
             </div>
           ) : selectedSetting?.label === t('currency_language') ? (
