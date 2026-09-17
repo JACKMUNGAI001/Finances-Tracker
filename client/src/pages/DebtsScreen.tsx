@@ -20,8 +20,11 @@ export default function DebtsScreen() {
   const [debts, setDebts] = useState<Debt[]>([]);
   const [loading, setLoading] = useState(true);
   const [debtFilter, setDebtFilter] = useState<FilterState>({ preset: 'all', range: { from: null, to: null } });
-  const [sheet, setSheet] = useState<'add' | 'edit' | null>(null);
-  const [_editingDebt, _setEditingDebt] = useState<Debt | null>(null);
+  const [sheet, setSheet] = useState<'add' | null>(null);
+  const [paySheetOpen, setPaySheetOpen] = useState(false);
+  const [payTarget, setPayTarget] = useState<Debt | null>(null);
+  const [payAmount, setPayAmount] = useState('');
+  const [payError, setPayError] = useState('');
   const [formName, setFormName] = useState('');
   const [formAmount, setFormAmount] = useState('');
   const [formType, setFormType] = useState<'owed' | 'lent'>('owed');
@@ -42,6 +45,7 @@ export default function DebtsScreen() {
         ...d,
         createdAt: d.createdAt || new Date().toISOString(),
         updatedAt: d.updatedAt || new Date().toISOString(),
+        paidAmount: d.paidAmount ?? 0,
       }));
       setDebts(normalized);
     } catch {
@@ -60,8 +64,11 @@ export default function DebtsScreen() {
   const owedDebts = useMemo(() => filteredDebts.filter(d => d.type === 'owed' && d.status === 'pending'), [filteredDebts]);
   const lentDebts = useMemo(() => filteredDebts.filter(d => d.type === 'lent' && d.status === 'pending'), [filteredDebts]);
 
-  const totalOwed = useMemo(() => owedDebts.reduce((sum, d) => sum + Number(d.amount), 0), [owedDebts]);
-  const totalLent = useMemo(() => lentDebts.reduce((sum, d) => sum + Number(d.amount), 0), [lentDebts]);
+  const remainingOwed = (d: Debt) => Number(d.amount) - Number(d.paidAmount ?? 0);
+  const remainingLent = (d: Debt) => Number(d.amount) - Number(d.paidAmount ?? 0);
+
+  const totalOwed = useMemo(() => owedDebts.reduce((sum, d) => sum + remainingOwed(d), 0), [owedDebts]);
+  const totalLent = useMemo(() => lentDebts.reduce((sum, d) => sum + remainingLent(d), 0), [lentDebts]);
 
   const handleAdd = async () => {
     setFormError('');
@@ -79,15 +86,9 @@ export default function DebtsScreen() {
         dueDate: formDueDate || undefined,
         description: formDescription || undefined,
         status: 'pending',
+        paidAmount: 0,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-      });
-      await createTransaction({
-        description: `${t('debts')}: ${formName.trim()}`,
-        amount: toBaseCurrency(parsed),
-        type: formType === 'owed' ? 'expense' : 'income',
-        category: 'Other',
-        date: new Date().toISOString(),
       });
       setDebts(prev => [newDebt, ...prev]);
       setSheet(null);
@@ -97,22 +98,35 @@ export default function DebtsScreen() {
     }
   };
 
-  const handleUpdate = async (id: string | number, debt: Debt) => {
+  const handlePaySubmit = async () => {
+    setPayError('');
+    if (!payTarget) return;
+    const parsed = parseFloat(payAmount);
+    const remaining = Number(payTarget.amount) - Number(payTarget.paidAmount ?? 0);
+    if (isNaN(parsed) || parsed <= 0 || parsed > remaining) {
+      setPayError(t('enter_valid_amount'));
+      return;
+    }
     try {
-      const updated = await updateDebt(id, {
-        status: 'paid',
-        updatedAt: new Date().toISOString(),
-      });
       await createTransaction({
-        description: `${t('debts')}: ${debt.name} (${t('mark_paid')})`,
-        amount: Number(debt.amount),
-        type: debt.type === 'owed' ? 'income' : 'expense',
+        description: `${t('debts')}: ${payTarget.name}`,
+        amount: toBaseCurrency(parsed),
+        type: payTarget.type === 'owed' ? 'expense' : 'income',
         category: 'Other',
         date: new Date().toISOString(),
       });
-      setDebts(prev => prev.map(d => d.id === id ? updated : d));
+      const newPaidAmount = Number(payTarget.paidAmount ?? 0) + parsed;
+      const updated = await updateDebt(payTarget.id!, {
+        paidAmount: toBaseCurrency(newPaidAmount),
+        status: newPaidAmount >= Number(payTarget.amount) ? 'paid' : 'pending',
+        updatedAt: new Date().toISOString(),
+      });
+      setDebts(prev => prev.map(d => d.id === payTarget.id ? updated : d));
+      setPaySheetOpen(false);
+      setPayTarget(null);
+      setPayAmount('');
     } catch {
-      // silent
+      setPayError(t('failed_to_save'));
     }
   };
 
@@ -127,6 +141,18 @@ export default function DebtsScreen() {
     }
   };
 
+  const handleMarkPaid = async (debt: Debt) => {
+    try {
+      const updated = await updateDebt(debt.id!, {
+        status: 'paid',
+        updatedAt: new Date().toISOString(),
+      });
+      setDebts(prev => prev.map(d => d.id === debt.id ? updated : d));
+    } catch {
+      // silent
+    }
+  };
+
   const resetForm = () => {
     setFormName('');
     setFormAmount('');
@@ -135,12 +161,20 @@ export default function DebtsScreen() {
     setFormDueDate('');
     setFormDescription('');
     setFormError('');
-    _setEditingDebt(null);
   };
+
+  const openPaySheet = (debt: Debt) => {
+    setPayTarget(debt);
+    setPayAmount('');
+    setPayError('');
+    setPaySheetOpen(true);
+  };
+
+  const remainingFor = (d: Debt) => Number(d.amount) - Number(d.paidAmount ?? 0);
 
   return (
     <div className="app-shell">
-      <div className="app-container pt-4 pb-20">
+      <div className="app-container pt-4 pb-24">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -163,7 +197,7 @@ export default function DebtsScreen() {
           <div className="rounded-[20px] bg-white p-4 shadow-card border border-border-light">
             <p className="text-xs font-medium text-text-secondary">{t('i_owe')}</p>
             <p className="mt-1 text-[22px] font-bold text-accent-red">-{formatCurrency(totalOwed)}</p>
-            <p className="mt-1 text-xs text-text-muted">{owedDebts.length} {t('debts') }</p>
+            <p className="mt-1 text-xs text-text-muted">{owedDebts.length} {t('debts')}</p>
           </div>
           <div className="rounded-[20px] bg-white p-4 shadow-card border border-border-light">
             <p className="text-xs font-medium text-text-secondary">{t('i_am_owed')}</p>
@@ -190,7 +224,8 @@ export default function DebtsScreen() {
                   key={debt.id}
                   debt={debt}
                   formatCurrency={formatCurrency}
-                  onPay={() => handleUpdate(debt.id!, debt)}
+                  onPay={() => openPaySheet(debt)}
+                  onMarkPaid={() => handleMarkPaid(debt)}
                   onDelete={() => handleDelete(debt.id!)}
                   categoryIcons={categoryIcons}
                 />
@@ -217,7 +252,8 @@ export default function DebtsScreen() {
                   key={debt.id}
                   debt={debt}
                   formatCurrency={formatCurrency}
-                  onPay={() => handleUpdate(debt.id!, debt)}
+                  onPay={() => openPaySheet(debt)}
+                  onMarkPaid={() => handleMarkPaid(debt)}
                   onDelete={() => handleDelete(debt.id!)}
                   categoryIcons={categoryIcons}
                 />
@@ -229,14 +265,11 @@ export default function DebtsScreen() {
 
       <BottomNav />
 
-      <BottomSheet open={sheet === 'add' || sheet === 'edit'} onClose={() => { setSheet(null); resetForm(); }}>
+      {/* Add Debt Sheet */}
+      <BottomSheet open={sheet === 'add'} onClose={() => { setSheet(null); resetForm(); }}>
         <div className="px-5 pb-8">
-          <h2 className="text-xl font-bold text-text-primary mb-1">
-            {sheet === 'edit' ? 'Edit Debt' : t('add_debt')}
-          </h2>
-          <p className="mt-1 text-sm text-text-secondary">
-            {sheet === 'edit' ? 'Update debt details' : 'Track money you owe or are owed'}
-          </p>
+          <h2 className="text-xl font-bold text-text-primary mb-1">{t('add_debt')}</h2>
+          <p className="mt-1 text-sm text-text-secondary">Track money you owe or are owed</p>
 
           {formError && (
             <div className="mt-4 p-3 bg-red-50 border border-red-100 rounded-[14px] text-xs text-red-600 font-medium">{formError}</div>
@@ -298,6 +331,54 @@ export default function DebtsScreen() {
           </button>
         </div>
       </BottomSheet>
+
+      {/* Payment Sheet */}
+      <BottomSheet open={paySheetOpen} onClose={() => { setPaySheetOpen(false); setPayTarget(null); setPayAmount(''); setPayError(''); }}>
+        <div className="px-5 pb-8">
+          <h2 className="text-xl font-bold text-text-primary mb-1">{t('add_payment')}</h2>
+          <p className="mt-1 text-sm text-text-secondary">{payTarget?.name || ''}</p>
+
+          {payTarget && (
+            <div className="mt-4 p-3 bg-gray-50 rounded-[14px]">
+              <p className="text-xs text-text-muted">{t('total_amount')}</p>
+              <p className="text-lg font-semibold text-text-primary">{formatCurrency(Number(payTarget.amount))}</p>
+              <p className="text-xs text-text-muted mt-2">{t('debt_remaining')}</p>
+              <p className="text-lg font-semibold text-accent-red">{formatCurrency(remainingFor(payTarget))}</p>
+            </div>
+          )}
+
+          {payError && (
+            <div className="mt-4 p-3 bg-red-50 border border-red-100 rounded-[14px] text-xs text-red-600 font-medium">{payError}</div>
+          )}
+
+          <div className="mt-6">
+            <label className="block text-xs font-semibold text-text-primary mb-2">{t('payment_amount')}</label>
+            <div className="relative">
+              <input
+                className="input-field"
+                type="number"
+                min="0"
+                step="0.01"
+                value={payAmount}
+                onChange={(e) => setPayAmount(e.target.value)}
+                placeholder="0"
+              />
+              {payTarget && (
+                <button
+                  onClick={() => setPayAmount(String(remainingFor(payTarget)))}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-xs font-semibold text-brand hover:text-brand-dark"
+                >
+                  {t('pay_all')}
+                </button>
+              )}
+            </div>
+          </div>
+
+          <button className="btn-primary mt-6" type="submit" onClick={handlePaySubmit}>
+            {t('save_payment')}
+          </button>
+        </div>
+      </BottomSheet>
     </div>
   );
 }
@@ -306,13 +387,17 @@ interface DebtItemProps {
   debt: Debt;
   formatCurrency: (amount: number) => string;
   onPay: () => void;
+  onMarkPaid: () => void;
   onDelete: () => void;
   categoryIcons: Record<string, string>;
 }
 
-function DebtItem({ debt, formatCurrency, onPay, onDelete, categoryIcons }: DebtItemProps) {
+function DebtItem({ debt, formatCurrency, onPay, onMarkPaid, onDelete, categoryIcons }: DebtItemProps) {
+  const { t } = useSettings();
   const isOwed = debt.type === 'owed';
   const icon = debt.description ? categoryIcons[debt.description.split(' ')[0]] || '💳' : '💳';
+  const remaining = Number(debt.amount) - Number(debt.paidAmount ?? 0);
+  const isFullyPaid = remaining <= 0;
 
   return (
     <div className="rounded-[16px] border border-[#f0f0f2] bg-white p-4 shadow-[0_3px_12px_rgba(17,24,39,.04)] flex items-center gap-3">
@@ -329,16 +414,31 @@ function DebtItem({ debt, formatCurrency, onPay, onDelete, categoryIcons }: Debt
         )}
       </div>
       <div className="flex flex-col items-end gap-2">
-        <p className={`text-sm font-semibold ${isOwed ? 'text-accent-red' : 'text-accent-green'}`}>
-          {isOwed ? '-' : '+'} {formatCurrency(Number(debt.amount))}
-        </p>
+        <div>
+          <p className={`text-sm font-semibold ${isOwed ? 'text-accent-red' : 'text-accent-green'}`}>
+            {isOwed ? '-' : '+'} {formatCurrency(remaining)}
+          </p>
+          {Number(debt.paidAmount) > 0 && (
+            <p className="text-xs text-text-muted text-right">
+              {t('paid')}: {formatCurrency(Number(debt.paidAmount))}
+            </p>
+          )}
+        </div>
         <div className="flex gap-1">
-          {debt.status === 'pending' && (
+          {debt.status === 'pending' && !isFullyPaid && (
             <button
               onClick={onPay}
+              className="px-2 py-1 rounded-[8px] bg-blue-50 text-accent-blue text-xs font-semibold hover:bg-blue-100 transition-colors"
+            >
+              {t('pay')}
+            </button>
+          )}
+          {debt.status === 'pending' && isFullyPaid && (
+            <button
+              onClick={onMarkPaid}
               className="px-2 py-1 rounded-[8px] bg-green-50 text-accent-green text-xs font-semibold hover:bg-green-100 transition-colors"
             >
-              ✓ Paid
+              ✓ {t('mark_paid')}
             </button>
           )}
           <button

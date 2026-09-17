@@ -32,6 +32,7 @@ export interface Debt {
   dueDate?: string;
   description?: string;
   status: DebtStatus;
+  paidAmount?: number;
   createdAt: string;
   updatedAt: string;
 }

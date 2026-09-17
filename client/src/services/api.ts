@@ -108,7 +108,7 @@ export async function deleteAccount(): Promise<void> {
 export async function fetchDebts(): Promise<Debt[]> {
   const { data, error } = await supabase
     .from('debts')
-    .select('id, name, amount, type, person, due_date, description, status, created_at, updated_at')
+    .select('id, name, amount, type, person, due_date, description, status, paid_amount, created_at, updated_at')
     .order('created_at', { ascending: false });
   if (error) throw error;
   return (data ?? []).map(row => ({
@@ -120,6 +120,7 @@ export async function fetchDebts(): Promise<Debt[]> {
     dueDate: row.due_date,
     description: row.description,
     status: row.status as Debt['status'],
+    paidAmount: Number(row.paid_amount) || 0,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   })) as Debt[];
@@ -136,21 +137,23 @@ export async function createDebt(debt: Omit<Debt, 'id'>): Promise<Debt> {
       due_date: debt.dueDate,
       description: debt.description,
       status: debt.status,
+      paid_amount: debt.paidAmount ?? 0,
       created_at: debt.createdAt,
       updated_at: debt.updatedAt,
     })
-    .select('id, name, amount, type, person, due_date, description, status, created_at, updated_at')
+    .select('id, name, amount, type, person, due_date, description, status, paid_amount, created_at, updated_at')
     .single();
   if (error) throw error;
   return {
     id: data.id,
     name: data.name,
     amount: Number(data.amount),
-    type: data.type as Debt['type'],
+    type: data    .type as Debt['type'],
     person: data.person,
     dueDate: data.due_date,
     description: data.description,
     status: data.status as Debt['status'],
+    paidAmount: Number(data.paid_amount) || 0,
     createdAt: data.created_at,
     updatedAt: data.updated_at,
   } as Debt;
@@ -167,11 +170,12 @@ export async function updateDebt(id: string | number, updates: Partial<Omit<Debt
       ...('dueDate' in updates && { due_date: updates.dueDate }),
       ...('description' in updates && { description: updates.description }),
       ...('status' in updates && { status: updates.status }),
+      ...('paidAmount' in updates && { paid_amount: updates.paidAmount }),
       ...('createdAt' in updates && { created_at: updates.createdAt }),
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)
-    .select('id, name, amount, type, person, due_date, description, status, created_at, updated_at')
+    .select('id, name, amount, type, person, due_date, description, status, paid_amount, created_at, updated_at')
     .single();
   if (error) throw error;
   return {
@@ -183,6 +187,7 @@ export async function updateDebt(id: string | number, updates: Partial<Omit<Debt
     dueDate: data.due_date,
     description: data.description,
     status: data.status as Debt['status'],
+    paidAmount: Number(data.paid_amount) || 0,
     createdAt: data.created_at,
     updatedAt: data.updated_at,
   } as Debt;

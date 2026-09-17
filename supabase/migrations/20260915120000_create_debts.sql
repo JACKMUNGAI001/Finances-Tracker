@@ -8,6 +8,7 @@ create table if not exists public.debts (
   due_date timestamptz,
   description text,
   status text not null check (status in ('pending', 'paid')) default 'pending',
+  paid_amount numeric(12, 2) not null default 0 check (paid_amount >= 0),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
