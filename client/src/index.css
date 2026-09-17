@@ -199,12 +199,12 @@
   }
 
   .mobile-fab {
-    bottom: calc(22px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(64px + env(safe-area-inset-bottom, 16px));
     right: calc(16px + env(safe-area-inset-right, 0px));
   }
 
   .fab-menu {
-    bottom: calc(92px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(120px + env(safe-area-inset-bottom, 16px));
     right: calc(16px + env(safe-area-inset-right, 0px));
   }
 
